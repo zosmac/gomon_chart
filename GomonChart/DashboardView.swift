@@ -9,19 +9,51 @@ import SwiftUI
 import Observation
 
 struct DashboardView: View {
-    @State private var event = GomonEvent()
-
+    let gomonProcess: GomonProcess
+    @State private var event = GomonEvents()
+    
+    let decoder = {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
+    
     var body: some View {
-        @Bindable var messages = GomonEvents(event: event)
         VStack {
-            Text(String(describing: String(data: event.json ?? Data("{}".utf8), encoding: .utf8)))
-                .task {
-                    messages.capture()
-                }
-            if let event = messages.event.any as? ProcessMeasure {
-                Text("Total CPU usage:\(event.total)")
-                Text("Total Memory usage:\(event.size)")
+            // use this to supply a List:
+            // event.message.map{ do { return try? decoder.decode(ProcessMeasure.self, from: Data($0.utf8)) } })")
+            ScrollView {
+                Text(event.message.joined(separator: "\n"))
+                    .multilineTextAlignment(.leading)
+                    .font(.system(size: 12.0))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            .task {
+                do {
+                    try await gomonProcess.runProcess(event: event)
+                } catch {
+                    print(error)
+                }
+            }
+        }
+    }
+    
+    func serialize(_ any: Any?) -> String {
+        guard let any else { return "{}" }
+        do {
+            let jsonData = try JSONSerialization.data(
+                withJSONObject: any,
+                options: [
+                    .prettyPrinted,
+                    .sortedKeys,
+                    .withoutEscapingSlashes,
+                    .fragmentsAllowed,
+                ]
+            )
+            return String(data: jsonData, encoding: .utf8) ?? "{}"
+        } catch {
+            return "{}"
         }
     }
 }

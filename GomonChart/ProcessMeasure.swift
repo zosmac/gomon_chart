@@ -66,7 +66,6 @@ struct ProcessMeasure: Codable & Sendable {
     }
 }
 
-nonisolated
 let sample: String = """
 {
   "timestamp": "2025-12-11T07:40:30.013176-05:00",

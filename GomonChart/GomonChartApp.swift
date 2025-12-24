@@ -9,9 +9,11 @@ import SwiftUI
 
 @main
 struct GomonChartApp: App {
+    @State private var gomonProcess = GomonProcess.shared
+
     var body: some Scene {
         Window("Dashboard", id: "Dashboard") {
-            DashboardView()
+            DashboardView(gomonProcess: gomonProcess)
         }
 //        Window("Nodegraph", id: "Nodegraph") {
 //            NodegraphView()
