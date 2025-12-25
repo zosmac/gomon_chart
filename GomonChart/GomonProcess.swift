@@ -27,22 +27,19 @@ actor GomonProcess {
         command.environment = ["GOMON_LOG_LEVEL": "debug", "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/keefe/go/bin"]
     }
 
-    func runProcess(event: GomonEvents) throws {
+    func runProcess(gomonEvents: GomonEvents) throws {
         print("INIT OBSERVER!!!!!!!!")
-        let observer = NotificationCenter.default.addObserver(for: Message.self) {
-            event.message = $0.payload
-        }
-        let observer2 = NotificationCenter.default.addObserver(forName: FileHandle.readCompletionNotification, object: stdout.fileHandleForReading, queue: .current) {
+        let observer = NotificationCenter.default.addObserver(forName: FileHandle.readCompletionNotification, object: stdout.fileHandleForReading, queue: .current) {
             self.stdout.fileHandleForReading.readInBackgroundAndNotify() // stage for next read
             let data = $0.userInfo?["NSFileHandleNotificationDataItem"] as! Data
-            let stream = String(data: data, encoding: .utf8)!
-            let payload = stream.split(separator: "\n")
+            let events = String(data: data, encoding: .utf8)!
+                .split(separator: "\n")
                 .map { String($0) }
                 .filter({ $0 != "null" })
-            if !payload.isEmpty {
-                print("====================\n\(payload)\n====================")
+            if !events.isEmpty {
+                print("====================\n\(events)\n====================")
                 Task { @MainActor in
-                    NotificationCenter.default.post(Message(payload: payload))
+                    gomonEvents.events = events
                 }
             }
         }
@@ -58,7 +55,6 @@ actor GomonProcess {
 
         print("FREE OBSERVER!!!!!")
         NotificationCenter.default.removeObserver(observer)
-        NotificationCenter.default.removeObserver(observer2)
     }
 
 //    func decode() {

@@ -10,7 +10,7 @@ import Observation
 
 struct DashboardView: View {
     let gomonProcess: GomonProcess
-    @State private var event = GomonEvents()
+    @State private var gomonEvents = GomonEvents()
     
     let decoder = {
         let decoder = JSONDecoder()
@@ -21,17 +21,17 @@ struct DashboardView: View {
     
     var body: some View {
         VStack {
-            // use this to supply a List:
+            // use this to build Table:
             // event.message.map{ do { return try? decoder.decode(ProcessMeasure.self, from: Data($0.utf8)) } })")
             ScrollView {
-                Text(event.message.joined(separator: "\n"))
+                Text(gomonEvents.events.joined(separator: "\n"))
                     .multilineTextAlignment(.leading)
                     .font(.system(size: 12.0))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             .task {
                 do {
-                    try await gomonProcess.runProcess(event: event)
+                    try await gomonProcess.runProcess(gomonEvents: gomonEvents)
                 } catch {
                     print(error)
                 }
