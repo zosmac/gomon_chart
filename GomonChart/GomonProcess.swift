@@ -6,15 +6,15 @@
 //
 
 import Foundation
+import SwiftData
 
 actor GomonProcess {
-    static let shared: GomonProcess = .init()
     let command = Process()
     let stdin = FileHandle(forReadingAtPath: "/dev/null")
     let stdout = Pipe()
     let stderr = Pipe()
 
-    private init() {
+    init() {
         // the filepath used here depends on sandboxing. Without sandboxing, use absolute path. With sandboxing, a relative path looks in the product location.
         command.executableURL = URL(filePath: "/Users/keefe/go/bin/gomon", directoryHint: .notDirectory, )
         command.arguments = ["-measures", "process", "-events", "none", "-top", "1"]
@@ -27,20 +27,21 @@ actor GomonProcess {
         command.environment = ["GOMON_LOG_LEVEL": "debug", "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/keefe/go/bin"]
     }
 
-    func runProcess(gomonEvents: GomonEvents) throws {
+    func run(context: ModelContext) async throws {
         print("INIT OBSERVER!!!!!!!!")
-        let observer = NotificationCenter.default.addObserver(forName: FileHandle.readCompletionNotification, object: stdout.fileHandleForReading, queue: .current) {
-            self.stdout.fileHandleForReading.readInBackgroundAndNotify() // stage for next read
-            let data = $0.userInfo?["NSFileHandleNotificationDataItem"] as! Data
-            let events = String(data: data, encoding: .utf8)!
-                .split(separator: "\n")
-                .map { String($0) }
-                .filter({ $0 != "null" })
-            if !events.isEmpty {
-                print("====================\n\(events)\n====================")
-                Task { @MainActor in
-                    gomonEvents.events = events
+        nonisolated(unsafe) let context = context // TODO: lock access? context not Sendable
+        let observer = NotificationCenter.default.addObserver(
+            forName: FileHandle.readCompletionNotification,
+            object: stdout.fileHandleForReading,
+            queue: .current
+        ) { [self] notification in
+            let data = notification.userInfo?["NSFileHandleNotificationDataItem"] as! Data
+            Task { @MainActor in
+                let measures = Measures(data: data)
+                if !measures.measures.isEmpty {
+                    context.insert(measures)
                 }
+                stdout.fileHandleForReading.readInBackgroundAndNotify()
             }
         }
 
@@ -56,27 +57,4 @@ actor GomonProcess {
         print("FREE OBSERVER!!!!!")
         NotificationCenter.default.removeObserver(observer)
     }
-
-//    func decode() {
-//        self.message = message
-//                .map {
-//                do {
-//                    let eventType = try decoder.decode(EventType.self, from: $0)
-//                    switch (eventType.source, eventType.event) {
-//                    case ("process", "measure"):
-//                        let measure = try decoder.decode(ProcessMeasure.self, from: $0)
-//                        print(measure.total)
-//                        print(measure.size)
-//                        return measure
-//                    default:
-//                        print("unrecognized event type \(eventType)")
-//                        break
-//                    }
-//                } catch {
-//                    print("failure with ProcessMeasure", error)
-//                }
-//                return Data()
-//            }
-//    }
-
 }

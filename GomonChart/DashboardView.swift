@@ -6,54 +6,57 @@
 //
 
 import SwiftUI
-import Observation
+import SwiftData
 
 struct DashboardView: View {
-    let gomonProcess: GomonProcess
-    @State private var gomonEvents = GomonEvents()
-    
-    let decoder = {
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        decoder.dateDecodingStrategy = .iso8601
-        return decoder
-    }()
-    
+    @Environment(\.modelContext) var modelContext
+    @Query(
+        filter: Measures.latestMeasures(),
+        sort: [.init(\.timestamp, order: .reverse)]
+    ) private var events: [Measures]
+    @State private var eventsID: Measures.ID?
+    @State private var event: Measures?
+
+    let dateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true, timeZone: .current)
+
     var body: some View {
-        VStack {
-            // use this to build Table:
-            // event.message.map{ do { return try? decoder.decode(ProcessMeasure.self, from: Data($0.utf8)) } })")
-            ScrollView {
-                Text(gomonEvents.events.joined(separator: "\n"))
-                    .multilineTextAlignment(.leading)
-                    .font(.system(size: 12.0))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        NavigationSplitView {
+            List(events, selection: $eventsID) { event in
+                Text(event.timestamp.formatted(dateFormat)).font(.system(size: 12, design: .monospaced))
+                    .tag(event.id)
             }
-            .task {
-                do {
-                    try await gomonProcess.runProcess(gomonEvents: gomonEvents)
-                } catch {
-                    print(error)
+            .onChange(of: events) {
+                if $0.count == 0 || $0.count > 0 && $0[0].id == eventsID {
+                    eventsID = $1[0].id
                 }
+            }
+            .onChange(of: eventsID) {
+                if let index = events.firstIndex(where: { $0.id == eventsID }) {
+                    event = events[index]
+                } else {
+                    event = events[0]
+                }
+            }
+            .navigationSplitViewColumnWidth(ideal: 240.0)
+        } detail: {
+            if event != nil {
+                EventView(event: event)
+            } else {
+                Text("select a time")
             }
         }
     }
-    
-    func serialize(_ any: Any?) -> String {
-        guard let any else { return "{}" }
-        do {
-            let jsonData = try JSONSerialization.data(
-                withJSONObject: any,
-                options: [
-                    .prettyPrinted,
-                    .sortedKeys,
-                    .withoutEscapingSlashes,
-                    .fragmentsAllowed,
-                ]
-            )
-            return String(data: jsonData, encoding: .utf8) ?? "{}"
-        } catch {
-            return "{}"
+}
+
+struct EventView: View {
+    var event: Measures?
+    var body: some View {
+        ScrollView {
+            Text(String(data:event!.data, encoding: .utf8) ?? "no data")
+                .multilineTextAlignment(.leading)
+                .font(.system(size: 12.0))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(10)
         }
     }
 }
