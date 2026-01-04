@@ -25,10 +25,20 @@ actor GomonProcess {
         command.standardError = stderr.fileHandleForWriting
         // Does setting PATH work to find executable with/without sandboxing?
         command.environment = ["GOMON_LOG_LEVEL": "debug", "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/keefe/go/bin"]
+        _ = NotificationCenter.default.addObserver(
+            forName: FileHandle.readCompletionNotification,
+            object: stderr.fileHandleForReading,
+            queue: .current
+        ) { [self] notification in
+            let data = notification.userInfo?["NSFileHandleNotificationDataItem"] as! Data
+            if let string = String(data: data, encoding: .utf8) {
+                print("=== stderr from gomon: ===\n\(string)")
+            }
+            stderr.fileHandleForReading.readInBackgroundAndNotify()
+        }
     }
 
     func run(context: ModelContext) async throws {
-        print("INIT OBSERVER!!!!!!!!")
         nonisolated(unsafe) let context = context // TODO: lock access? context not Sendable
         let observer = NotificationCenter.default.addObserver(
             forName: FileHandle.readCompletionNotification,
@@ -47,6 +57,7 @@ actor GomonProcess {
 
         do {
             try self.command.run()
+            stderr.fileHandleForReading.readInBackgroundAndNotify()
             stdout.fileHandleForReading.readInBackgroundAndNotify()
             command.waitUntilExit()
         } catch {
@@ -54,7 +65,7 @@ actor GomonProcess {
             throw error
         }
 
-        print("FREE OBSERVER!!!!!")
+        print("GOMON EXITED, STDOUT OBSERVER FREED!!!!!")
         NotificationCenter.default.removeObserver(observer)
     }
 }

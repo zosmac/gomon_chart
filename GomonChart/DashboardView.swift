@@ -8,6 +8,8 @@
 import SwiftUI
 import SwiftData
 
+let dateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true, timeZone: .current)
+
 struct DashboardView: View {
     @Environment(\.modelContext) var modelContext
     @Query(
@@ -16,8 +18,6 @@ struct DashboardView: View {
     ) private var events: [Measures]
     @State private var eventsID: Measures.ID?
     @State private var event: Measures?
-
-    let dateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true, timeZone: .current)
 
     var body: some View {
         NavigationSplitView {
@@ -39,7 +39,7 @@ struct DashboardView: View {
             }
             .navigationSplitViewColumnWidth(ideal: 240.0)
         } detail: {
-            if event != nil {
+            if let event {
                 EventView(event: event)
             } else {
                 Text("select a time")
@@ -49,14 +49,15 @@ struct DashboardView: View {
 }
 
 struct EventView: View {
-    var event: Measures?
+    var event: Measures
     var body: some View {
         ScrollView {
-            Text(String(data:event!.data, encoding: .utf8) ?? "no data")
+            Text(String(data: try! event.encode(), encoding: .utf8) ?? "no data")
                 .multilineTextAlignment(.leading)
                 .font(.system(size: 12.0))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .padding(10)
         }
+        .navigationTitle(event.timestamp.formatted(dateFormat)).font(.system(size: 12, design: .monospaced))
     }
 }

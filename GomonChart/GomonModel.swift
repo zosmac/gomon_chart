@@ -16,7 +16,7 @@ import UniformTypeIdentifiers
         }
     }
 
-    static let encoder = {
+    static private let encoder = {
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         encoder.dateEncodingStrategy = .iso8601
@@ -24,7 +24,7 @@ import UniformTypeIdentifiers
         return encoder
     }()
 
-    static let decoder = {
+    static private let decoder = {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .iso8601
@@ -57,6 +57,10 @@ import UniformTypeIdentifiers
         try container.encode(self.measures, forKey: .measures)
     }
 
+    func encode() throws -> Data {
+        try Self.encoder.encode(self)
+    }
+
     func decode(data: Data) throws {
         var measures = [Measure]()
         let events = String(data: data, encoding: .utf8)!
@@ -65,12 +69,12 @@ import UniformTypeIdentifiers
             .filter { $0 != "null" }
             .map { Data($0.utf8) }
         for event in events {
-            let measure = try Measures.decoder.decode(Measure.self, from: event)
+            let measure = try Self.decoder.decode(Measure.self, from: event)
             switch (measure.event, measure.source) {
             case ("measure", "process"):
-                measures.append(try Measures.decoder.decode(MeasureProcess.self, from: event))
+                measures.append(try Self.decoder.decode(MeasureProcess.self, from: event))
             case ("measure", "serve"):
-                measures.append(try Measures.decoder.decode(MeasureServe.self, from: event))
+                measures.append(try Self.decoder.decode(MeasureServe.self, from: event))
             default:
                 measures.append(measure)
             }
@@ -80,10 +84,10 @@ import UniformTypeIdentifiers
 
     var data: Data {
         get {
-            try! Measures.encoder.encode(self)
+            try! encode()
         }
         set {
-            try? self.decode(data: newValue)
+            try? decode(data: newValue)
         }
     }
 }
