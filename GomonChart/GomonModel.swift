@@ -8,78 +8,91 @@
 import SwiftData
 import UniformTypeIdentifiers
 
-@Model class Measures: Codable & Identifiable {
-    static func latestMeasures() -> Predicate<Measures> {
-        let currentDate = Date.now - 600
-        return #Predicate<Measures> {
-            $0.timestamp > currentDate
-        }
-    }
+/// jsonDateFormatter defines formatter for fomatting JSON dates consistent with jsonDateStyle used for displayed dates.
+nonisolated
+let jsonDateFormatter = { let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX"
+    return formatter
+}()
 
+/// jsonDateStyle defines style for format dates to display consistent with the jsonDateFormatter used for JSON dates.
+let jsonDateStyle = Date.ISO8601FormatStyle(
+    timeZoneSeparator: .colon,
+    includingFractionalSeconds: true,
+    timeZone: .current,
+)
+
+enum EventKind: Int {
+    case allEvents = 0, processMeasure, serverMeasure
+}
+
+@Model class Events: Codable & Identifiable {
     static private let encoder = {
         let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        encoder.dateEncodingStrategy = .iso8601
+//        encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.dateEncodingStrategy = .formatted(jsonDateFormatter)
         encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes, .sortedKeys]
         return encoder
     }()
 
     static private let decoder = {
         let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
+//        decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .iso8601
         return decoder
     }()
 
     var timestamp = Date()
     var id: Date { timestamp }
-    var measures: [Measure]
-    init(measures: [Measure]) {
-        self.measures = measures
-    }
+    var events: [Event]
+//    init(events: [Event]) {
+//        self.events = events
+//    }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case measures
+        case events
     }
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.measures = try container.decode([Measure].self, forKey: .measures)
+        self.events = try container.decode([Event].self, forKey: .events)
     }
 
-    convenience init(data: Data) {
-        self.init(measures: [])
-        try? decode(data: data)
+    init(data: Data) {
+        self.events = [Event]()
+        decode(data: data)
     }
 
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.measures, forKey: .measures)
+        try container.encode(self.events, forKey: .events)
     }
 
     func encode() throws -> Data {
         try Self.encoder.encode(self)
     }
 
-    func decode(data: Data) throws {
-        var measures = [Measure]()
-        let events = String(data: data, encoding: .utf8)!
+    func decode(data: Data) {
+        let datas = String(data: data, encoding: .utf8)!
             .split(separator: "\n")
             .map { String($0) }
             .filter { $0 != "null" }
             .map { Data($0.utf8) }
-        for event in events {
-            let measure = try Self.decoder.decode(Measure.self, from: event)
-            switch (measure.event, measure.source) {
-            case ("measure", "process"):
-                measures.append(try Self.decoder.decode(MeasureProcess.self, from: event))
-            case ("measure", "serve"):
-                measures.append(try Self.decoder.decode(MeasureServe.self, from: event))
-            default:
-                measures.append(measure)
+        do {
+            for data in datas {
+                let eventKind = try Self.decoder.decode(Event.self, from: data)
+                switch (eventKind.event, eventKind.source) {
+                case ("measure", "process"):
+                    events.append(try Self.decoder.decode(MeasureProcess.self, from: data))
+                case ("measure", "serve"):
+                    events.append(try Self.decoder.decode(MeasureServe.self, from: data))
+                default:
+                    events.append(eventKind)
+                }
             }
+        } catch {
+            print("error \(error) decoding \(data)")
         }
-        self.measures = measures
     }
 
     var data: Data {
@@ -87,12 +100,12 @@ import UniformTypeIdentifiers
             try! encode()
         }
         set {
-            try? decode(data: newValue)
+            decode(data: newValue)
         }
     }
 }
 
-@Model class Measure: Identifiable & Codable {
+@Model class Event: Identifiable & Codable {
     var id = UUID()
     var timestamp: Date
     var host: String
@@ -147,6 +160,6 @@ struct GomonModelVersionedSchema: VersionedSchema {
     static let versionIdentifier = Schema.Version(1, 0, 0)
 
     static let models: [any PersistentModel.Type] = [
-        Measures.self, Measure.self, MeasureServe.self, MeasureProcess.self,
+        Events.self, Event.self, MeasureServe.self, MeasureProcess.self,
     ]
 }

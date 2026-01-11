@@ -17,7 +17,7 @@ actor GomonProcess {
     init() {
         // the filepath used here depends on sandboxing. Without sandboxing, use absolute path. With sandboxing, a relative path looks in the product location.
         command.executableURL = URL(filePath: "/Users/keefe/go/bin/gomon", directoryHint: .notDirectory, )
-        command.arguments = ["-measures", "process", "-events", "none", "-top", "1"]
+        command.arguments = ["-measurements", "process", "-observations", "none", "-top", "1"]
         //            process.executableURL = URL(fileURLWithPath: "/bin/sh")
         //            process.arguments = ["-c", "/Users/keefe/go/bin/gomon -measures process -events none -top 1"]
         command.standardInput = stdin
@@ -47,9 +47,9 @@ actor GomonProcess {
         ) { [self] notification in
             let data = notification.userInfo?["NSFileHandleNotificationDataItem"] as! Data
             Task { @MainActor in
-                let measures = Measures(data: data)
-                if !measures.measures.isEmpty {
-                    context.insert(measures)
+                let events = Events(data: data)
+                if !events.events.isEmpty {
+                    context.insert(events)
                 }
                 stdout.fileHandleForReading.readInBackgroundAndNotify()
             }

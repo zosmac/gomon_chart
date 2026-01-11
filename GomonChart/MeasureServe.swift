@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @available(macOS 26.0, *)
-@Model class MeasureServe: Measure {
+@Model class MeasureServe: Event {
     var eventId: ServeID
     var address: String     // http address of server
     var endpoints: [String] // server endpoints
@@ -19,13 +19,13 @@ import SwiftData
     var lokiStreams: Int
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case eventId
+        case eventId = "event_id"
         case address
         case endpoints
-        case httpRequests
+        case httpRequests = "http_requests"
         case collections
-        case collectionTime
-        case lokiStreams
+        case collectionTime = "collection_time"
+        case lokiStreams = "loki_streams"
     }
 
     struct ServeID: Codable & Sendable {

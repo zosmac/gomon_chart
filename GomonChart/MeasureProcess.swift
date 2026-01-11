@@ -9,22 +9,24 @@ import Foundation
 import SwiftData
 
 @available(macOS 26.0, *)
-@Model class MeasureProcess: Measure {
+@Model class MeasureProcess: Event {
     var eventId: ProcessID
     var ppid: Int
-    var pgid: Int
-    var tty: String
-    var uid: Int
-    var gid: Int
+    var pgid: Int?
+    var tgid: Int?
+    var tty: String?
+    var uid: Int?
+    var gid: Int?
     var username: String
     var groupname: String
     var status: String
+    var nice: Int?
     var executable: String // a file path
-    var args: [String]?
+    var args: [String]
     var envs: [String: String]?
     var cwd: String // a file path
     var root: String // a file path
-    var priority: Int
+    var priority: Int?
     var threads: Int
     var user: Int64   // nanoseconds
     var system: Int64 // nanoseconds
@@ -32,22 +34,24 @@ import SwiftData
     var size: Int
     var resident: Int
     var pageFaults: Int
-    var contextSwitches: Int
+    var contextSwitches: Int?
     var readActual: Int
     var writeActual: Int
-    var writeRequested: Int
+    var writeRequested: Int?
     var connections: [Connection]?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case eventId
+        case eventId = "event_id"
         case ppid
         case pgid
+        case tgid
         case tty
         case uid
         case gid
         case username
         case groupname
         case status
+        case nice
         case executable // a file path
         case args
         case envs
@@ -60,11 +64,11 @@ import SwiftData
         case total
         case size
         case resident
-        case pageFaults
-        case contextSwitches
-        case readActual
-        case writeActual
-        case writeRequested
+        case pageFaults = "page_faults"
+        case contextSwitches = "context_switches"
+        case readActual = "read_actual"
+        case writeActual = "write_actual"
+        case writeRequested = "write_requested"
         case connections
     }
 
@@ -72,19 +76,21 @@ import SwiftData
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.eventId = try container.decode(ProcessID.self, forKey: .eventId)
         self.ppid = try container.decode(Int.self, forKey: .ppid)
-        self.pgid = try container.decode(Int.self, forKey: .pgid)
-        self.tty = try container.decode(String.self, forKey: .tty)
-        self.uid = try container.decode(Int.self, forKey: .uid)
-        self.gid = try container.decode(Int.self, forKey: .gid)
+        self.pgid = try? container.decode(Int.self, forKey: .pgid)
+        self.tgid = try? container.decode(Int.self, forKey: .tgid)
+        self.tty = try? container.decode(String.self, forKey: .tty)
+        self.uid = try? container.decode(Int.self, forKey: .uid)
+        self.gid = try? container.decode(Int.self, forKey: .gid)
         self.username = try container.decode(String.self, forKey: .username)
         self.groupname = try container.decode(String.self, forKey: .groupname)
         self.status = try container.decode(String.self, forKey: .status)
+        self.nice = try? container.decode(Int.self, forKey: .nice)
         self.executable = try container.decode(String.self, forKey: .executable) // a file path
-        self.args = try? container.decode([String].self, forKey: .args)
+        self.args = try container.decode([String].self, forKey: .args)
         self.envs = try? container.decode([String: String].self, forKey: .envs)
         self.cwd = try container.decode(String.self, forKey: .cwd)  // a file path
         self.root = try container.decode(String.self, forKey: .root) // a file path
-        self.priority = try container.decode(Int.self, forKey: .priority)
+        self.priority = try? container.decode(Int.self, forKey: .priority)
         self.threads = try container.decode(Int.self, forKey: .threads)
         self.user = try container.decode(Int64.self, forKey: .user)
         self.system = try container.decode(Int64.self, forKey: .system)
@@ -92,10 +98,10 @@ import SwiftData
         self.size = try container.decode(Int.self, forKey: .size)
         self.resident = try container.decode(Int.self, forKey: .resident)
         self.pageFaults = try container.decode(Int.self, forKey: .pageFaults)
-        self.contextSwitches = try container.decode(Int.self, forKey: .contextSwitches)
+        self.contextSwitches = try? container.decode(Int.self, forKey: .contextSwitches)
         self.readActual = try container.decode(Int.self, forKey: .readActual)
         self.writeActual = try container.decode(Int.self, forKey: .writeActual)
-        self.writeRequested = try container.decode(Int.self, forKey: .writeRequested)
+        self.writeRequested = try? container.decode(Int.self, forKey: .writeRequested)
         self.connections = try? container.decode([Connection].self, forKey: .connections)
         try super.init(from: decoder)
     }
@@ -105,19 +111,21 @@ import SwiftData
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.eventId, forKey: .eventId)
         try container.encode(self.ppid, forKey: .ppid)
-        try container.encode(self.pgid, forKey: .pgid)
-        try container.encode(self.tty, forKey: .tty)
-        try container.encode(self.uid, forKey: .uid)
-        try container.encode(self.gid, forKey: .gid)
+        try? container.encode(self.pgid, forKey: .pgid)
+        try? container.encode(self.tgid, forKey: .tgid)
+        try? container.encode(self.tty, forKey: .tty)
+        try? container.encode(self.uid, forKey: .uid)
+        try? container.encode(self.gid, forKey: .gid)
         try container.encode(self.username, forKey: .username)
         try container.encode(self.groupname, forKey: .groupname)
         try container.encode(self.status, forKey: .status)
+        try? container.encode(self.nice, forKey: .nice)
         try container.encode(self.executable, forKey: .executable) // a file path
         try container.encode(self.args, forKey: .args)
         try container.encode(self.envs, forKey: .envs)
         try container.encode(self.cwd, forKey: .cwd)  // a file path
         try container.encode(self.root, forKey: .root) // a file path
-        try container.encode(self.priority, forKey: .priority)
+        try? container.encode(self.priority, forKey: .priority)
         try container.encode(self.threads, forKey: .threads)
         try container.encode(self.user, forKey: .user)
         try container.encode(self.system, forKey: .system)
@@ -125,11 +133,11 @@ import SwiftData
         try container.encode(self.size, forKey: .size)
         try container.encode(self.resident, forKey: .resident)
         try container.encode(self.pageFaults, forKey: .pageFaults)
-        try container.encode(self.contextSwitches, forKey: .contextSwitches)
+        try? container.encode(self.contextSwitches, forKey: .contextSwitches)
         try container.encode(self.readActual, forKey: .readActual)
         try container.encode(self.writeActual, forKey: .writeActual)
-        try container.encode(self.writeRequested, forKey: .writeRequested)
-        try container.encode(self.connections, forKey: .connections)
+        try? container.encode(self.writeRequested, forKey: .writeRequested)
+        try? container.encode(self.connections, forKey: .connections)
     }
 
     struct Endpoint: Codable & Sendable {

@@ -14,18 +14,14 @@ struct GomonChartApp: App {
     var body: some Scene {
         DocumentGroup(
             editing: .gomonModelDocument,
-            migrationPlan: GomonModelMigrationPlan.self
-        ) {
-            DashboardView()
-        } prepareDocument: { context in
-            Task {
-                do {
-                    try await GomonProcess().run(context: context)
-                } catch {
-                    print(error)
-                }
+            migrationPlan: GomonModelMigrationPlan.self,
+            editor: {
+                DashboardView()
+            },
+            prepareDocument: { context in
+                print("New document created for \(context.container.configurations)")
             }
-        }
+        )
 
         //        Window("Nodegraph", id: "Nodegraph") {
         //            NodegraphView()
