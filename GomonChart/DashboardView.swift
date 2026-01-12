@@ -16,10 +16,6 @@ struct DashboardView: View {
     @State private var event: Events?
     @State private var eventKind: EventKind = .allEvents
 
-    func insert(_ events: Events) -> Void {
-        modelContext.insert(events)
-    }
-
     var body: some View {
         NavigationSplitView {
             List(events, selection: $eventsID) { event in
@@ -43,7 +39,9 @@ struct DashboardView: View {
             .navigationSplitViewColumnWidth(ideal: 320.0)
             .task {
                 do {
-                    try await GomonProcess().run(insert)
+                    try await GomonProcess().run {
+                        modelContext.insert($0)
+                    }
                 } catch {
                     print(error)
                 }
@@ -67,11 +65,7 @@ struct DashboardView: View {
                 }
             }
         } detail: {
-            if let event {
-                EventView(event: event)
-            } else {
-                Text("select a time")
-            }
+            EventView(event: event)
         }
     }
 
@@ -81,15 +75,19 @@ struct DashboardView: View {
 }
 
 struct EventView: View {
-    var event: Events
+    var event: Events?
     var body: some View {
-        ScrollView {
-            Text(String(data: try! event.encode(), encoding: .utf8) ?? "no data")
-                .multilineTextAlignment(.leading)
-                .font(.system(size: 12.0))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(10)
+        if let event {
+            ScrollView {
+                Text(String(data: try! event.encode(), encoding: .utf8) ?? "no data")
+                    .multilineTextAlignment(.leading)
+                    .font(.system(size: 12.0))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(10)
+            }
+            .navigationSubtitle(String(describing: event)).font(.system(size: 12, design: .monospaced))
+        } else {
+            Text("Awaiting first events from the gomon process...")
         }
-        .navigationSubtitle(String(describing: event)).font(.system(size: 12, design: .monospaced))
     }
 }
