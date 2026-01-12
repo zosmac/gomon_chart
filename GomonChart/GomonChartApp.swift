@@ -19,7 +19,7 @@ struct GomonChartApp: App {
                 DashboardView()
             },
             prepareDocument: { context in
-                print("New document created for \(context.container.configurations)")
+                print("New document created:\n\(context.container.configurations)\n")
             }
         )
 

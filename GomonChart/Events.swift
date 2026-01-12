@@ -1,5 +1,5 @@
 //
-//  GomonModel.swift
+//  Events.swift
 //  GomonChart
 //
 //  Created by Keefe Hayes on 12/25/25.
@@ -16,6 +16,7 @@ let jsonDateFormatter = { let formatter = DateFormatter()
 }()
 
 /// jsonDateStyle defines style for format dates to display consistent with the jsonDateFormatter used for JSON dates.
+nonisolated
 let jsonDateStyle = Date.ISO8601FormatStyle(
     timeZoneSeparator: .colon,
     includingFractionalSeconds: true,
@@ -26,7 +27,7 @@ enum EventKind: Int {
     case allEvents = 0, processMeasure, serverMeasure
 }
 
-@Model class Events: Codable & Identifiable {
+@Model class Events: Codable & Identifiable & CustomStringConvertible {
     static private let encoder = {
         let encoder = JSONEncoder()
 //        encoder.keyEncodingStrategy = .convertToSnakeCase
@@ -45,9 +46,9 @@ enum EventKind: Int {
     var timestamp = Date()
     var id: Date { timestamp }
     var events: [Event]
-//    init(events: [Event]) {
-//        self.events = events
-//    }
+    var description: String {
+        timestamp.formatted(jsonDateStyle)
+    }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case events

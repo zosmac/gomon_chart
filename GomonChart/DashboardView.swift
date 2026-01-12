@@ -16,17 +16,19 @@ struct DashboardView: View {
     @State private var event: Events?
     @State private var eventKind: EventKind = .allEvents
 
+    func insert(_ events: Events) -> Void {
+        modelContext.insert(events)
+    }
+
     var body: some View {
         NavigationSplitView {
             List(events, selection: $eventsID) { event in
-                Text(event.timestamp.formatted(jsonDateStyle)).font(.system(size: 12, design: .monospaced))
+                Text(String(describing: event)).font(.system(size: 12, design: .monospaced))
                     .tag(event.id)
             }
             .onChange(of: events, initial: true) {
-                if $0.count == 0 || $0.count > 0 && eventsID == $0[0].id {
-                    if $1.count > 0 {
-                        eventsID = $1[0].id
-                    }
+                if ($0.count == 0 || $0.count > 0 && eventsID == $0[0].id) && $1.count > 0 {
+                    eventsID = $1[0].id
                 } else if $0.count > 0 && eventsID == nil {
                     eventsID = $0[0].id
                 }
@@ -41,8 +43,7 @@ struct DashboardView: View {
             .navigationSplitViewColumnWidth(ideal: 320.0)
             .task {
                 do {
-                    nonisolated(unsafe) let context = modelContext
-                    try await GomonProcess().run(context: context)
+                    try await GomonProcess().run(insert)
                 } catch {
                     print(error)
                 }
@@ -89,6 +90,6 @@ struct EventView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .padding(10)
         }
-        .navigationSubtitle(event.timestamp.formatted(jsonDateStyle)).font(.system(size: 12, design: .monospaced))
+        .navigationSubtitle(String(describing: event)).font(.system(size: 12, design: .monospaced))
     }
 }

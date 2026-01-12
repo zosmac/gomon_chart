@@ -38,25 +38,24 @@ actor GomonProcess {
         }
     }
 
-    func run(context: ModelContext) async throws {
-        nonisolated(unsafe) let context = context // TODO: lock access? context not Sendable
+    func run( _ insert: @escaping (@MainActor @Sendable (Events) -> Void) ) async throws {
         let observer = NotificationCenter.default.addObserver(
             forName: FileHandle.readCompletionNotification,
             object: stdout.fileHandleForReading,
             queue: .current
         ) { [self] notification in
             let data = notification.userInfo?["NSFileHandleNotificationDataItem"] as! Data
-            Task { @MainActor in
-                let events = Events(data: data)
-                if !events.events.isEmpty {
-                    context.insert(events)
+            stdout.fileHandleForReading.readInBackgroundAndNotify()
+            let events = Events(data: data)
+            if !events.events.isEmpty {
+                Task { @MainActor in
+                    insert(events)
                 }
-                stdout.fileHandleForReading.readInBackgroundAndNotify()
             }
         }
 
         do {
-            try self.command.run()
+            try command.run()
             stderr.fileHandleForReading.readInBackgroundAndNotify()
             stdout.fileHandleForReading.readInBackgroundAndNotify()
             command.waitUntilExit()
