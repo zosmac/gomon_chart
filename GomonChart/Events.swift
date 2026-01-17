@@ -73,7 +73,7 @@ final class Events {
     var platform: String
     var source: String
     var event: String
-    var key: String { "" }
+    var eventId: String { "" }
 
     var timestamp: String {
         get {

@@ -66,7 +66,7 @@ struct EventListView: View {
     var body: some View {
         List(events, selection: $eventID) { event in
             VStack(alignment: .leading, spacing: 0) {
-                Text(event.key)
+                Text(event.eventId)
                 Text(event.timestamp)
             }
             .tag(event.id)
@@ -110,7 +110,7 @@ struct EventView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .padding(10)
             }
-            .navigationSubtitle("\(event.key)\n\(event.timestamp)")
+            .navigationSubtitle("\(event.eventId)\n\(event.timestamp)")
         } else {
             Text("Awaiting first events from Gomon...")
         }

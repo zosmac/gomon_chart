@@ -10,11 +10,11 @@ import SwiftData
 
 @available(macOS 26.0, *)
 @Model class MeasureServe: Event {
-    override var key: String {
-        "\(eventId.name)"
+    override var eventId: String {
+        "\(_eventId.name)"
     }
 
-    var eventId: ServeID
+    var _eventId: ServeID
     var address: String     // http address of gomon's server
     var endpoints: [String] // server endpoints
     var httpRequests: Int
@@ -38,7 +38,7 @@ import SwiftData
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.eventId = try container.decode(ServeID.self, forKey: .eventId)
+        self._eventId = try container.decode(ServeID.self, forKey: .eventId)
         self.address = try container.decode(String.self, forKey: .address)
         self.endpoints = try container.decode([String].self, forKey: .endpoints)
         self.httpRequests = try container.decode(Int.self, forKey: .httpRequests)

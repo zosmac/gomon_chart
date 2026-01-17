@@ -10,11 +10,11 @@ import SwiftData
 
 @available(macOS 26.0, *)
 @Model class MeasureProcess: Event {
-    override var key: String {
-        "\(eventId.name)[\(eventId.pid)]"
+    override var eventId: String {
+        "\(_eventId.name)[\(_eventId.pid)]"
     }
 
-    var eventId: ProcessID
+    var _eventId: ProcessID
     var ppid: Int
     var pgid: Int?
     var tgid: Int?
@@ -78,7 +78,7 @@ import SwiftData
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.eventId = try container.decode(ProcessID.self, forKey: .eventId)
+        self._eventId = try container.decode(ProcessID.self, forKey: .eventId)
         self.ppid = try container.decode(Int.self, forKey: .ppid)
         self.pgid = try? container.decode(Int.self, forKey: .pgid)
         self.tgid = try? container.decode(Int.self, forKey: .tgid)
@@ -151,8 +151,8 @@ import SwiftData
 
     struct Connection: Codable & Sendable {
         let fdType: String
-        let local:  Endpoint // "self"
-        let remote: Endpoint // "peer"
+        let local:  Endpoint
+        let remote: Endpoint
 
         enum CodingKeys: String, CodingKey {
             case fdType = "type"
