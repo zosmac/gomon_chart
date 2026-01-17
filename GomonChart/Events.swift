@@ -28,7 +28,7 @@ enum EventKind: Int {
 }
 
 nonisolated
-struct Events {
+final class Events {
     static let encoder = {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .formatted(jsonDateFormatter)
@@ -48,28 +48,21 @@ struct Events {
     }
 
     init(data: Data) {
-        var events = [Event]()
-        let datas = String(data: data, encoding: .utf8)!
+        self.events = try! String(data: data, encoding: .utf8)!
             .split(separator: "\n")
             .filter { $0 != "null" }
-            .map { Data($0.utf8) }
-
-        do {
-            for data in datas {
-                let eventKind = try Self.decoder.decode(Event.self, from: data)
-                switch (eventKind.event, eventKind.source) {
+            .map {
+                let data = Data($0.utf8)
+                let event = try Self.decoder.decode(Event.self, from: data)
+                switch (event.event, event.source) {
                 case ("measure", "process"):
-                    events.append(try Self.decoder.decode(MeasureProcess.self, from: data))
+                    return try Self.decoder.decode(MeasureProcess.self, from: data)
                 case ("measure", "serve"):
-                    events.append(try Self.decoder.decode(MeasureServe.self, from: data))
+                    return try Self.decoder.decode(MeasureServe.self, from: data)
                 default:
-                    events.append(eventKind)
+                    return event
                 }
-            }
-        } catch {
-            print("error \(error) decoding \(data)")
         }
-        self.events = events
     }
 }
 
