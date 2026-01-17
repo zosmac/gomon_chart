@@ -10,6 +10,7 @@ import SwiftUI
 
 @main
 struct GomonChartApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
         DocumentGroup(
@@ -22,9 +23,30 @@ struct GomonChartApp: App {
                 print("New document created:\n\(context.container.configurations)\n")
             }
         )
+//        .commands {
+//            CommandGroup(replacing: .appTermination) {
+//
+//            }
+//        }
 
         //        Window("Nodegraph", id: "Nodegraph") {
         //            NodegraphView()
         //        }
+    }
+}
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        print("Application finished launching \(notification)")
+    }
+
+    func applicationShouldTerminate(_ application: NSApplication) -> NSApplication.TerminateReply {
+        print("Application should terminate \(application)")
+        GomonProcess.shared.command.terminate()
+        return .terminateLater
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        print("Application will terminate \(notification)")
     }
 }

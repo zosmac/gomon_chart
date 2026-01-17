@@ -9,58 +9,33 @@ import SwiftUI
 import SwiftData
 
 struct DashboardView: View {
-    @Environment(\.modelContext) var modelContext
     @Environment(\.colorScheme) var colorScheme
-    @Query(sort: [.init(\Events.timestamp, order: .reverse)]) private var events: [Events]
-    @State private var eventsID: Events.ID?
-    @State private var event: Events?
+    @State private var predicate: Predicate<Event>?
+    @State private var event: Event?
     @State private var eventKind: EventKind = .allEvents
 
     var body: some View {
         NavigationSplitView {
-            List(events, selection: $eventsID) { event in
-                Text(String(describing: event)).font(.system(size: 12, design: .monospaced))
-                    .tag(event.id)
-            }
-            .onChange(of: events, initial: true) {
-                if ($0.count == 0 || $0.count > 0 && eventsID == $0[0].id) && $1.count > 0 {
-                    eventsID = $1[0].id
-                } else if $0.count > 0 && eventsID == nil {
-                    eventsID = $0[0].id
-                }
-            }
-            .onChange(of: eventsID) {
-                if let index = events.firstIndex(where: { $0.id == eventsID }) {
-                    event = events[index]
-                } else {
-                    event = events[0]
-                }
-            }
+            EventListView(predicate: predicate, event: $event)
             .navigationSplitViewColumnWidth(ideal: 320.0)
-            .task {
-                do {
-                    try await GomonProcess().run {
-                        modelContext.insert($0)
-                    }
-                } catch {
-                    print(error)
-                }
-            }
             .toolbar {
                 ToolbarItem(id: "Event Type", placement: .primaryAction) {
                     ControlGroup("Event Type") {
                         Button("All", systemImage: "rectangle.3.group") {
                             eventKind = .allEvents
+                            predicate = nil
                         }
                         .glassEffect(.regular.tint(tint(eventKind == .allEvents)))
                         Button("Process", systemImage: "list.clipboard") {
                             eventKind = .processMeasure
+                            predicate = #Predicate<Event> { $0 is MeasureProcess }
                         }
                         .glassEffect(.regular.tint(tint(eventKind == .processMeasure)))
-                        Button("Server", systemImage: "server.rack") {
-                            eventKind = .serverMeasure
+                        Button("Serve", systemImage: "server.rack") {
+                            eventKind = .serveMeasure
+                            predicate = #Predicate<Event> { $0 is MeasureServe }
                         }
-                        .glassEffect(.regular.tint(tint(eventKind == .serverMeasure)))
+                        .glassEffect(.regular.tint(tint(eventKind == .serveMeasure)))
                     }
                 }
             }
@@ -74,20 +49,70 @@ struct DashboardView: View {
     }
 }
 
+struct EventListView: View {
+    @Environment(\.modelContext) var modelContext
+    @Binding var event: Event?
+    @Query private var events: [Event]
+    @State private var eventID: Event.ID?
+
+    init(predicate: Predicate<Event>? = nil, event: Binding<Event?>) {
+        _events = Query(
+            filter: predicate,
+            sort: [.init(\._timestamp, order: .reverse)],
+        )
+        _event = event
+    }
+
+    var body: some View {
+        List(events, selection: $eventID) { event in
+            VStack(alignment: .leading, spacing: 0) {
+                Text(event.key)
+                Text(event.timestamp)
+            }
+            .tag(event.id)
+        }
+        .onChange(of: events) {
+            if ($0.count == 0 || $0.count > 0 && eventID == $0[0].id) && $1.count > 0 {
+                eventID = $1[0].id
+            } else if $0.count > 0 && eventID == nil {
+                eventID = $0[0].id
+            }
+        }
+        .onChange(of: eventID) {
+            if let index = events.firstIndex(where: { $0.id == eventID }) {
+                event = events[index]
+            } else if events.count > 0 {
+                event = events[0]
+            }
+        }
+        .task {
+            do {
+                try await GomonProcess.shared.run {
+                    for event in $0.events {
+                        modelContext.insert(event)
+                    }
+                }
+            } catch {
+                print(error)
+            }
+        }
+    }
+}
+
 struct EventView: View {
-    var event: Events?
+    var event: Event?
     var body: some View {
         if let event {
             ScrollView {
-                Text(String(data: try! event.encode(), encoding: .utf8) ?? "no data")
+                Text(String(data: (try? Events.encoder.encode(event)) ?? Data(), encoding: .utf8) ?? "no data")
                     .multilineTextAlignment(.leading)
                     .font(.system(size: 12.0))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .padding(10)
             }
-            .navigationSubtitle(String(describing: event)).font(.system(size: 12, design: .monospaced))
+            .navigationSubtitle("\(event.key)\n\(event.timestamp)")
         } else {
-            Text("Awaiting first events from the gomon process...")
+            Text("Awaiting first events from Gomon...")
         }
     }
 }

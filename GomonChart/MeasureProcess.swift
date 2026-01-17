@@ -10,6 +10,10 @@ import SwiftData
 
 @available(macOS 26.0, *)
 @Model class MeasureProcess: Event {
+    override var key: String {
+        "\(eventId.name)[\(eventId.pid)]"
+    }
+
     var eventId: ProcessID
     var ppid: Int
     var pgid: Int?

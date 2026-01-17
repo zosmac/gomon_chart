@@ -10,13 +10,17 @@ import SwiftData
 
 @available(macOS 26.0, *)
 @Model class MeasureServe: Event {
+    override var key: String {
+        "\(eventId.name)"
+    }
+
     var eventId: ServeID
-    var address: String     // http address of server
+    var address: String     // http address of gomon's server
     var endpoints: [String] // server endpoints
     var httpRequests: Int
     var collections: Int      // prometheus
     var collectionTime: Int64 // prometheus
-    var lokiStreams: Int
+    var lokiStreams: Int      // loki
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case eventId = "event_id"
