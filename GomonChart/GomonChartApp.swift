@@ -42,8 +42,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminate(_ application: NSApplication) -> NSApplication.TerminateReply {
         print("Application should terminate \(application)")
-        GomonProcess.shared.command.terminate()
-        return .terminateLater
+        if GomonProcess.shared.command.isRunning {
+            GomonProcess.shared.command.terminate()
+            return .terminateLater
+        }
+        return .terminateNow
     }
 
     func applicationWillTerminate(_ notification: Notification) {
