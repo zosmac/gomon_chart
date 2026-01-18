@@ -91,6 +91,7 @@ struct EventListView: View {
                     for event in $0.events {
                         modelContext.insert(event)
                     }
+                    try? modelContext.save()
                 }
             } catch {
                 print(error)

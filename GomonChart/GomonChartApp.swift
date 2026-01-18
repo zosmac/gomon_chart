@@ -23,11 +23,6 @@ struct GomonChartApp: App {
                 print("New document created:\n\(context.container.configurations)\n")
             }
         )
-//        .commands {
-//            CommandGroup(replacing: .appTermination) {
-//
-//            }
-//        }
 
         //        Window("Nodegraph", id: "Nodegraph") {
         //            NodegraphView()
