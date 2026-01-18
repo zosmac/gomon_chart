@@ -26,7 +26,7 @@ import SwiftData
     var status: String
     var nice: Int?
     var executable: String // a file path
-    var args: [String]
+    var args: [String]?
     var envs: [String: String]?
     var cwd: String // a file path
     var root: String // a file path
@@ -90,7 +90,7 @@ import SwiftData
         self.status = try container.decode(String.self, forKey: .status)
         self.nice = try? container.decode(Int.self, forKey: .nice)
         self.executable = try container.decode(String.self, forKey: .executable) // a file path
-        self.args = try container.decode([String].self, forKey: .args)
+        self.args = try? container.decode([String].self, forKey: .args)
         self.envs = try? container.decode([String: String].self, forKey: .envs)
         self.cwd = try container.decode(String.self, forKey: .cwd)  // a file path
         self.root = try container.decode(String.self, forKey: .root) // a file path
@@ -125,8 +125,8 @@ import SwiftData
         try container.encode(self.status, forKey: .status)
         try? container.encode(self.nice, forKey: .nice)
         try container.encode(self.executable, forKey: .executable) // a file path
-        try container.encode(self.args, forKey: .args)
-        try container.encode(self.envs, forKey: .envs)
+        try? container.encode(self.args, forKey: .args)
+        try? container.encode(self.envs, forKey: .envs)
         try container.encode(self.cwd, forKey: .cwd)  // a file path
         try container.encode(self.root, forKey: .root) // a file path
         try? container.encode(self.priority, forKey: .priority)
