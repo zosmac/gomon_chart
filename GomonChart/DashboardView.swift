@@ -71,7 +71,7 @@ struct EventListView: View {
             }
             .tag(event.id)
         }
-        .onChange(of: events) {
+        .onChange(of: events, initial: true) {
             if ($0.count == 0 || $0.count > 0 && eventID == $0[0].id) && $1.count > 0 {
                 eventID = $1[0].id
             } else if $0.count > 0 && eventID == nil {
