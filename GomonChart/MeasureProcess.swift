@@ -10,42 +10,43 @@ import SwiftData
 
 @available(macOS 26.0, *)
 @Model class MeasureProcess: Event {
-    override var eventId: String {
-        "\(_eventId.name)[\(_eventId.pid)]"
+    override func eventId() -> String {
+        guard let processId else { return "" }
+        return "\(processId.name)[\(processId.pid)]"
     }
 
-    var _eventId: ProcessID
-    var ppid: Int
+    var processId: ProcessID?
+    var ppid: Int?
     var pgid: Int?
     var tgid: Int?
     var tty: String?
     var uid: Int?
     var gid: Int?
-    var username: String
-    var groupname: String
-    var status: String
+    var username: String?
+    var groupname: String?
+    var status: String?
     var nice: Int?
-    var executable: String // a file path
+    var executable: String? // a file path
     var args: [String]?
     var envs: [String: String]?
-    var cwd: String // a file path
-    var root: String // a file path
+    var cwd: String? // a file path
+    var root: String? // a file path
     var priority: Int?
-    var threads: Int
-    var user: Int64   // nanoseconds
-    var system: Int64 // nanoseconds
-    var total: Int64  // nanoseconds
-    var size: Int
-    var resident: Int
-    var pageFaults: Int
+    var threads: Int?
+    var user: Int64?   // nanoseconds
+    var system: Int64? // nanoseconds
+    var total: Int64?  // nanoseconds
+    var size: Int?
+    var resident: Int?
+    var pageFaults: Int?
     var contextSwitches: Int?
-    var readActual: Int
-    var writeActual: Int
+    var readActual: Int?
+    var writeActual: Int?
     var writeRequested: Int?
     var connections: [Connection]?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case eventId = "event_id"
+        case processId = "event_id"
         case ppid
         case pgid
         case tgid
@@ -78,7 +79,7 @@ import SwiftData
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self._eventId = try container.decode(ProcessID.self, forKey: .eventId)
+        self.processId = try container.decode(ProcessID.self, forKey: .processId)
         self.ppid = try container.decode(Int.self, forKey: .ppid)
         self.pgid = try? container.decode(Int.self, forKey: .pgid)
         self.tgid = try? container.decode(Int.self, forKey: .tgid)
@@ -113,7 +114,7 @@ import SwiftData
     override func encode(to encoder: any Encoder) throws {
         try super.encode(to :encoder)
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.eventId, forKey: .eventId)
+        try container.encode(self.processId, forKey: .processId)
         try container.encode(self.ppid, forKey: .ppid)
         try? container.encode(self.pgid, forKey: .pgid)
         try? container.encode(self.tgid, forKey: .tgid)

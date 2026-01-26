@@ -10,20 +10,20 @@ import SwiftData
 
 @available(macOS 26.0, *)
 @Model class MeasureServe: Event {
-    override var eventId: String {
-        "\(_eventId.name)"
+    override func eventId() -> String {
+        "\(serveId?.name ?? "")"
     }
 
-    var _eventId: ServeID
-    var address: String     // http address of gomon's server
-    var endpoints: [String] // server endpoints
-    var httpRequests: Int
-    var collections: Int      // prometheus
-    var collectionTime: Int64 // prometheus
-    var lokiStreams: Int      // loki
+    var serveId: ServeID?
+    var address: String?     // http address of gomon's server
+    var endpoints: [String]? // server endpoints
+    var httpRequests: Int?
+    var collections: Int?      // prometheus
+    var collectionTime: Int64? // prometheus
+    var lokiStreams: Int?      // loki
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case eventId = "event_id"
+        case serveId = "event_id"
         case address
         case endpoints
         case httpRequests = "http_requests"
@@ -38,7 +38,7 @@ import SwiftData
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self._eventId = try container.decode(ServeID.self, forKey: .eventId)
+        self.serveId = try container.decode(ServeID.self, forKey: .serveId)
         self.address = try container.decode(String.self, forKey: .address)
         self.endpoints = try container.decode([String].self, forKey: .endpoints)
         self.httpRequests = try container.decode(Int.self, forKey: .httpRequests)
@@ -51,7 +51,7 @@ import SwiftData
     override func encode(to encoder: any Encoder) throws {
         try super.encode(to :encoder)
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.eventId, forKey: .eventId)
+        try container.encode(self.serveId, forKey: .serveId)
         try container.encode(self.address, forKey: .address)
         try container.encode(self.endpoints, forKey: .endpoints)
         try container.encode(self.httpRequests, forKey: .httpRequests)

@@ -43,25 +43,27 @@ final class Events {
     }()
 
     var events: [Event]
-    init(events: [Event]) {
-        self.events = events
-    }
 
     init(data: Data) {
-        self.events = try! String(data: data, encoding: .utf8)!
-            .split(separator: "\n")
-            .filter { $0 != "null" }
-            .map {
-                let data = Data($0.utf8)
-                let event = try Self.decoder.decode(Event.self, from: data)
-                switch (event.event, event.source) {
-                case ("measure", "process"):
-                    return try Self.decoder.decode(MeasureProcess.self, from: data)
-                case ("measure", "serve"):
-                    return try Self.decoder.decode(MeasureServe.self, from: data)
-                default:
-                    return event
+        do {
+            self.events = try String(data: data, encoding: .utf8)!
+                .split(separator: "\n")
+                .filter { $0 != "null" }
+                .map {
+                    let data = Data($0.utf8)
+                    let event = try Self.decoder.decode(Event.self, from: data)
+                    switch (event.event, event.source) {
+                    case ("measure", "process"):
+                        return try Self.decoder.decode(MeasureProcess.self, from: data)
+                    case ("measure", "serve"):
+                        return try Self.decoder.decode(MeasureServe.self, from: data)
+                    default:
+                        return event
+                    }
                 }
+        } catch {
+            print("decoding events failed \(error)")
+            self.events = []
         }
     }
 }
@@ -73,7 +75,7 @@ final class Events {
     var platform: String
     var source: String
     var event: String
-    var eventId: String { "" }
+    func eventId() -> String { "" } // override in model subclasses
 
     var timestamp: String {
         get {
