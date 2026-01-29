@@ -38,26 +38,26 @@ import SwiftData
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.serveId = try container.decode(ServeID.self, forKey: .serveId)
-        self.address = try container.decode(String.self, forKey: .address)
-        self.endpoints = try container.decode([String].self, forKey: .endpoints)
-        self.httpRequests = try container.decode(Int.self, forKey: .httpRequests)
-        self.collections = try container.decode(Int.self, forKey: .collections)
-        self.collectionTime = try container.decode(Int64.self, forKey: .collectionTime)
-        self.lokiStreams = try container.decode(Int.self, forKey: .lokiStreams)
+        serveId = try container.decode(ServeID.self, forKey: .serveId)
+        address = try container.decode(String.self, forKey: .address)
+        endpoints = try container.decode([String].self, forKey: .endpoints)
+        httpRequests = try container.decode(Int.self, forKey: .httpRequests)
+        collections = try container.decode(Int.self, forKey: .collections)
+        collectionTime = try container.decode(Int64.self, forKey: .collectionTime)
+        lokiStreams = try container.decode(Int.self, forKey: .lokiStreams)
         try super.init(from: decoder)
     }
 
     override func encode(to encoder: any Encoder) throws {
         try super.encode(to :encoder)
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.serveId, forKey: .serveId)
-        try container.encode(self.address, forKey: .address)
-        try container.encode(self.endpoints, forKey: .endpoints)
-        try container.encode(self.httpRequests, forKey: .httpRequests)
-        try container.encode(self.collections, forKey: .collections)
-        try container.encode(self.collectionTime, forKey: .collectionTime)
-        try container.encode(self.lokiStreams, forKey: .lokiStreams)
+        try container.encode(serveId, forKey: .serveId)
+        try container.encode(address, forKey: .address)
+        try container.encode(endpoints, forKey: .endpoints)
+        try container.encode(httpRequests, forKey: .httpRequests)
+        try container.encode(collections, forKey: .collections)
+        try container.encode(collectionTime, forKey: .collectionTime)
+        try container.encode(lokiStreams, forKey: .lokiStreams)
     }
 }
 

@@ -97,19 +97,19 @@ final class Events {
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         _timestamp = try container.decode(Date.self, forKey: .timestamp)
-        self.host = try container.decode(String.self, forKey: .host)
-        self.platform = try container.decode(String.self, forKey: .platform)
-        self.source = try container.decode(String.self, forKey: .source)
-        self.event = try container.decode(String.self, forKey: .event)
+        host = try container.decode(String.self, forKey: .host)
+        platform = try container.decode(String.self, forKey: .platform)
+        source = try container.decode(String.self, forKey: .source)
+        event = try container.decode(String.self, forKey: .event)
     }
 
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.timestamp, forKey: .timestamp)
-        try container.encode(self.host, forKey: .host)
-        try container.encode(self.platform, forKey: .platform)
-        try container.encode(self.source, forKey: .source)
-        try container.encode(self.event, forKey: .event)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(host, forKey: .host)
+        try container.encode(platform, forKey: .platform)
+        try container.encode(source, forKey: .source)
+        try container.encode(event, forKey: .event)
     }
 }
 

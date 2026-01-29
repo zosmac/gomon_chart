@@ -7,38 +7,7 @@
 
 import SwiftUI
 import SwiftData
-
-@Observable final class DashboardWindow {
-    var window = Window(NSView())
-    struct Window: NSViewRepresentable {
-        let nsView: NSView
-        init(_ nsView: NSView) {
-            self.nsView = nsView
-        }
-        func makeNSView(context: Context) -> NSView { nsView }
-        func updateNSView(_ nsView: NSView, context: Context) {}
-        static func dismantleNSView(_ nsView: Self.NSViewType, coordinator: Self.Coordinator) {
-            print("dismantle nsView \(nsView)")
-            print("dismantle nsView window \(nsView.window, default: "nil")")
-        }
-    }
-    @MainActor deinit {
-        print("deinit DashboardWindow \(String(describing: window.nsView.window))")
-    }
-}
-
-struct ContentView: View {
-    @State private var window = DashboardWindow()
-
-    var body: some View {
-        DashboardView(window: window)
-            .background { window.window } // creates background view that shares window
-    }
-}
-
 struct DashboardView: View {
-    @Bindable var window: DashboardWindow
-
     @Environment(\.colorScheme) var colorScheme
     @State private var predicate: Predicate<Event>?
     @State private var event: Event?
@@ -46,7 +15,6 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationSplitView {
-            //            Text("window \(String(describing: window.window.nsView.window))")
             EventListView(predicate: predicate, event: $event)
                 .navigationSplitViewColumnWidth(ideal: 320.0)
                 .toolbar {
@@ -71,7 +39,7 @@ struct DashboardView: View {
                     }
                 }
         } detail: {
-            EventView(event: event, window: window)
+            EventView(event: event)
         }
     }
 
@@ -81,7 +49,6 @@ struct DashboardView: View {
 }
 
 struct EventListView: View {
-    @Environment(\.modelContext) var modelContext
     @Binding var event: Event?
     @Query private var events: [Event]
     @State private var eventID: Event.ID?
@@ -121,9 +88,8 @@ struct EventListView: View {
 
 struct EventView: View {
     var event: Event?
-    @Bindable var window: DashboardWindow
     var body: some View {
-        if let event, window.window.nsView.window != nil {
+        if let event {
             ScrollView {
                 Text(String(data: (try? Events.encoder.encode(event)) ?? Data(), encoding: .utf8) ?? "no data")
                     .multilineTextAlignment(.leading)

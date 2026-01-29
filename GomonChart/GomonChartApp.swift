@@ -8,14 +8,6 @@
 import SwiftData
 import SwiftUI
 
-extension FocusedValues {
-    @Entry var focusedModelContext: Binding<ModelContext>?
-}
-
-@Observable final class Insertor {
-    var insert: (@MainActor @Sendable (Events) -> Bool) = { _ in true }
-}
-
 @main
 struct GomonChartApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
@@ -25,8 +17,7 @@ struct GomonChartApp: App {
             editing: .gomonModelDocument,
             migrationPlan: GomonModelMigrationPlan.self,
             editor: {
-                ContentView()
-//                DashboardView()
+                DashboardView()
             },
             prepareDocument: { modelContext in
                 // Each "new" document replaces the gomon process insert events closure.
@@ -35,6 +26,7 @@ struct GomonChartApp: App {
                     if !modelContext.autosaveEnabled {
                         return false // tells gomon process to remove this insert closure
                     }
+
                     do {
                         try modelContext.transaction {
                             for event in events.events {
@@ -46,11 +38,6 @@ struct GomonChartApp: App {
                         print("Transaction failed: \(error)")
                         return false
                     }
-//                    do {
-//                        try modelContext.save()
-//                    } catch {
-//                        print("Save failed: \(error)")
-//                    }
                 }
             }
         )
@@ -63,12 +50,11 @@ struct GomonChartApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var windowCloseObserver: NSObjectProtocol?
-    var processTerminateObserver: NSObjectProtocol?
+//    var processTerminateObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("Application finished launching \(notification)")
 
-        // create observer here in task, so that it is retained until task exits
         windowCloseObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
             object: nil,
@@ -86,26 +72,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let process = GomonProcess.shared,
            process.command.isRunning {
             print("process object is \(process)")
-            processTerminateObserver = NotificationCenter.default.addObserver(
-                forName: Process.didTerminateNotification,
-                object: process.command,
-                queue: .current
-            ) { notification in
-                print("process terminated \(String(describing: notification.object))")
-                Task {
-                    await NSApp.reply(toApplicationShouldTerminate: true)
-                }
-            }
-            GomonProcess.shared!.command.terminate()
+            process.appIsTerminating = true
+            process.command.terminate()
             return .terminateLater
         }
         return .terminateNow
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        if let windowCloseObserver {
-            NotificationCenter.default.removeObserver(windowCloseObserver, name: NSWindow.willCloseNotification, object: nil)
-        }
         print("Application will terminate \(notification)")
     }
 }

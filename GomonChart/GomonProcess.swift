@@ -9,12 +9,20 @@ import Foundation
 import SwiftData
 import SwiftUI
 
+struct OpenWindow: NotificationCenter.AsyncMessage {
+    typealias Subject = GomonProcess
+    let id: UUID
+    let title: String
+    let window: NSWindow?
+}
+
 actor GomonProcess {
     @Observable final class Coordinator {
         var gomonProcess: GomonProcess?
     }
 
-    @MainActor var insert: (@MainActor @Sendable (Events) -> Bool) = { _ in true }
+    @MainActor var appIsTerminating: Bool = false
+    @MainActor var insert: (@MainActor @Sendable (Events) -> Bool)? = nil // = { _ in true }
     @MainActor static private let coordinator = Coordinator()
     @MainActor static var shared: GomonProcess? {
         get {
@@ -47,7 +55,7 @@ actor GomonProcess {
 
         Task {
             // create observers here in task, so that they are retained until task exits
-            NotificationCenter.default.addObserver(
+            let stderrObserver = NotificationCenter.default.addObserver(
                 forName: FileHandle.readCompletionNotification,
                 object: stderr.fileHandleForReading,
                 queue: .current
@@ -59,7 +67,7 @@ actor GomonProcess {
                 stderr.fileHandleForReading.readInBackgroundAndNotify()
             }
 
-            NotificationCenter.default.addObserver(
+            let stdoutObserver = NotificationCenter.default.addObserver(
                 forName: FileHandle.readCompletionNotification,
                 object: stdout.fileHandleForReading,
                 queue: .current
@@ -69,22 +77,28 @@ actor GomonProcess {
 
                 let events = Events(data: data)
                 if !events.events.isEmpty {
-                    Task { @MainActor in
-                        if !insert(events) {       // if insert fails ...
-                            insert = { _ in true } //   un-register event capture
-                            self.command.terminate()
+                    Task { @MainActor [self] in
+                        if let fn = insert,
+                           !fn(events) { // if insert fails ...
+                            insert = nil //   un-register event capture
+                            command.terminate()
                         }
                     }
                 }
             }
 
-            print("command to await termination is \(self.command)")
-            NotificationCenter.default.addObserver(
+            print("command to await termination is \(command)")
+            let commandTerminateObserver = NotificationCenter.default.addObserver(
                 forName: Process.didTerminateNotification,
-                object: self.command,
+                object: command,
                 queue: .current
             ) { notification in
                 print("process terminated \(String(describing: notification.object))")
+                Task { @MainActor [self] in
+                    if appIsTerminating {
+                        NSApp.reply(toApplicationShouldTerminate: true)
+                    }
+                }
             }
 
             do {
@@ -98,6 +112,10 @@ actor GomonProcess {
             } catch {
                 print(error)
             }
+
+            NotificationCenter.default.removeObserver(commandTerminateObserver, name: Process.didTerminateNotification, object: command)
+            NotificationCenter.default.removeObserver(stdoutObserver, name: FileHandle.readCompletionNotification, object: stdout.fileHandleForReading)
+            NotificationCenter.default.removeObserver(stderrObserver, name: FileHandle.readCompletionNotification, object: stderr.fileHandleForReading)
         }
     }
 
