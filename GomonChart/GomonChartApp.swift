@@ -7,6 +7,13 @@
 
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
+
+extension UTType {
+    static var gomonEventsDocument: UTType {
+        UTType(exportedAs: "com.github.zosmac.gomonevents")
+    }
+}
 
 @main
 struct GomonChartApp: App {
@@ -14,8 +21,8 @@ struct GomonChartApp: App {
 
     var body: some Scene {
         DocumentGroup(
-            editing: .gomonModelDocument,
-            migrationPlan: GomonModelMigrationPlan.self,
+            editing: .gomonEventsDocument,
+            migrationPlan: GomonEventsMigrationPlan.self,
             editor: {
                 DashboardView()
             },
@@ -41,16 +48,16 @@ struct GomonChartApp: App {
                 }
             }
         )
-    }
 
-    //        Window("Nodegraph", id: "Nodegraph") {
-    //            NodegraphView()
-    //        }
+//        Window("Nodegraph", id: "Nodegraph") {
+//            NodegraphView()
+//        }
+
+    }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var windowCloseObserver: NSObjectProtocol?
-//    var processTerminateObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("Application finished launching \(notification)")

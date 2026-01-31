@@ -11,13 +11,13 @@
 			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>com.github.zosmac.gomonchart</string>
+				<string>com.github.zosmac.gomonevents</string>
 			</array>
 			<key>NSUbiquitousDocumentUserActivityType</key>
-			<string>$(PRODUCT_BUNDLE_IDENTIFIER).gomonchart</string>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER).gomonevents</string>
 		</dict>
 	</array>
-	<key>UTImportedTypeDeclarations</key>
+	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
 			<key>UTTypeConformsTo</key>
@@ -25,14 +25,14 @@
 				<string>com.apple.package</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>GomonChart SwiftData Document</string>
+			<string>GomonEvents SwiftData Document</string>
 			<key>UTTypeIdentifier</key>
-			<string>com.github.zosmac.gomonchart</string>
+			<string>com.github.zosmac.gomonevents</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
 				<array>
-					<string>gomonchart</string>
+					<string>gomonevents</string>
 				</array>
 			</dict>
 		</dict>

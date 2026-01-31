@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+
 struct DashboardView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var predicate: Predicate<Event>?
@@ -51,7 +52,7 @@ struct DashboardView: View {
 struct EventListView: View {
     @Binding var event: Event?
     @Query private var events: [Event]
-    @State private var eventID: Event.ID?
+    @State private var eventID: PersistentIdentifier?
 
     init(predicate: Predicate<Event>? = nil, event: Binding<Event?>) {
         _events = Query(
@@ -91,7 +92,7 @@ struct EventView: View {
     var body: some View {
         if let event {
             ScrollView {
-                Text(String(data: (try? Events.encoder.encode(event)) ?? Data(), encoding: .utf8) ?? "no data")
+                Text(String(data: (try? event.encode()) ?? Data(), encoding: .utf8) ?? "no data")
                     .multilineTextAlignment(.leading)
                     .font(.system(size: 12.0))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

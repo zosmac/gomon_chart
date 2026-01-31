@@ -22,7 +22,7 @@ actor GomonProcess {
     }
 
     @MainActor var appIsTerminating: Bool = false
-    @MainActor var insert: (@MainActor @Sendable (Events) -> Bool)? = nil // = { _ in true }
+    @MainActor var insert: (@MainActor @Sendable (GomonEvents) -> Bool)? = nil // = { _ in true }
     @MainActor static private let coordinator = Coordinator()
     @MainActor static var shared: GomonProcess? {
         get {
@@ -75,7 +75,7 @@ actor GomonProcess {
                 let data = notification.userInfo?["NSFileHandleNotificationDataItem"] as! Data
                 stdout.fileHandleForReading.readInBackgroundAndNotify()
 
-                let events = Events(data: data)
+                let events = GomonEvents(data: data)
                 if !events.events.isEmpty {
                     Task { @MainActor [self] in
                         if let fn = insert,
@@ -119,7 +119,7 @@ actor GomonProcess {
         }
     }
 
-    @MainActor func register(_ insert: @escaping (@MainActor @Sendable (Events) -> Bool) ) {
+    @MainActor func register(_ insert: @escaping (@MainActor @Sendable (GomonEvents) -> Bool) ) {
         self.insert = insert
     }
 }
