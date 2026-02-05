@@ -12,7 +12,7 @@ struct DashboardView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var predicate: Predicate<Event>?
     @State private var event: Event?
-    @State private var eventKind: EventKind = .allEvents
+    @State private var eventKind: GomonEvents.Kind = .allEvents
 
     var body: some View {
         NavigationSplitView {
@@ -63,25 +63,31 @@ struct EventListView: View {
     }
 
     var body: some View {
-        List(events, selection: $eventID) { event in
-            VStack(alignment: .leading, spacing: 0) {
-                Text(event.eventId())
-                Text(event.timestamp)
+        ScrollViewReader { proxy in
+            List(events, selection: $eventID) { event in
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(event.eventId())
+                    Text(event.timestamp)
+                }
+                .tag(event.id)
             }
-            .tag(event.id)
-        }
-        .onChange(of: events, initial: true) {
-            if ($0.count == 0 || $0.count > 0 && eventID == $0[0].id) && $1.count > 0 {
-                eventID = $1[0].id
-            } else if $0.count > 0 && eventID == nil {
-                eventID = $0[0].id
+            .onChange(of: events, initial: true) {
+                if ($0.count == 0 || $0.count > 0 && eventID == $0[0].id) && $1.count > 0 {
+                    eventID = $1[0].id
+                    proxy.scrollTo(eventID, anchor: .top)
+                } else if $0.count > 0 && eventID == nil {
+                    eventID = $0[0].id
+                    proxy.scrollTo(eventID, anchor: .top)
+                } else {
+                    proxy.scrollTo(eventID, anchor: .center)
+                }
             }
-        }
-        .onChange(of: eventID) {
-            if let index = events.firstIndex(where: { $0.id == eventID }) {
-                event = events[index]
-            } else if events.count > 0 {
-                event = events[0]
+            .onChange(of: eventID) {
+                if let index = events.firstIndex(where: { $0.id == eventID }) {
+                    event = events[index]
+                } else if events.count > 0 {
+                    event = events[0]
+                }
             }
         }
     }

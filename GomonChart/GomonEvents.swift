@@ -7,31 +7,33 @@
 
 import Foundation
 import SwiftData
+import UniformTypeIdentifiers
 
-/// jsonDateFormatter defines formatter for fomatting JSON dates consistent with jsonDateStyle used for displayed dates.
-nonisolated
-let jsonDateFormatter = { let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX"
-    return formatter
-}()
-
-/// jsonDateStyle defines style for format dates to display consistent with the jsonDateFormatter used for JSON dates.
-nonisolated
-let jsonDateStyle = Date.ISO8601FormatStyle(
-    timeZoneSeparator: .colon,
-    includingFractionalSeconds: true,
-    timeZone: .current,
-)
-
-enum EventKind: Int {
-    case allEvents = 0, processMeasure, serveMeasure
+extension UTType {
+    static var gomonEventsDocument: UTType {
+        UTType(exportedAs: "com.github.zosmac.gomonevents")
+    }
 }
 
-/// Events is the container for delivering JSON encoded Gomon events.
+/// GomonEvents encodes and decodes JSON Gomon events, nonisolated so that it can be called from GomonProcess detached Task.
 nonisolated final class GomonEvents {
+    enum Kind: Int {
+        case allEvents = 0, processMeasure, serveMeasure
+    }
+
+    /// jsonDateStyle defines style to format dates consistent with the JSON encoder's date format.
+    static let jsonDateStyle = Date.ISO8601FormatStyle(
+        timeZoneSeparator: .colon,
+        includingFractionalSeconds: true,
+        timeZone: .current,
+    )
+
+    /// JSON Encoder with Date formatter to format dates consistent with jsonDateStyle used for UI displayed dates.
     static private let encoder = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX"
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .formatted(jsonDateFormatter)
+        encoder.dateEncodingStrategy = .formatted(formatter)
         encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes, .sortedKeys]
         return encoder
     }()
@@ -50,11 +52,10 @@ nonisolated final class GomonEvents {
         try Self.decoder.decode(T.self, from: data)
     }
 
-    var events: [Event]
-
-    init(data: Data) {
+    static func events(data: Data) -> [Event] {
+        var events = [Event]()
         do {
-            self.events = try String(data: data, encoding: .utf8)!
+            events = try String(data: data, encoding: .utf8)!
                 .split(separator: "\n")
                 .filter { $0 != "null" }
                 .map {
@@ -71,8 +72,8 @@ nonisolated final class GomonEvents {
                 }
         } catch {
             print("decoding events failed \(error)")
-            self.events = []
         }
+        return events
     }
 }
 
@@ -87,7 +88,7 @@ nonisolated final class GomonEvents {
 
     var timestamp: String {
         get {
-            _timestamp?.formatted(jsonDateStyle) ?? ""
+            _timestamp?.formatted(GomonEvents.jsonDateStyle) ?? ""
         }
         set {
             _timestamp = try! Date(newValue, strategy: .iso8601)

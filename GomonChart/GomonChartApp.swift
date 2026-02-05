@@ -7,13 +7,6 @@
 
 import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
-
-extension UTType {
-    static var gomonEventsDocument: UTType {
-        UTType(exportedAs: "com.github.zosmac.gomonevents")
-    }
-}
 
 @main
 struct GomonChartApp: App {
@@ -36,7 +29,7 @@ struct GomonChartApp: App {
 
                     do {
                         try modelContext.transaction {
-                            for event in events.events {
+                            for event in events {
                                 modelContext.insert(event)
                             }
                         }
@@ -69,7 +62,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ) { notification in
             let window = notification.object as! NSWindow
             Task { @MainActor in
-                print("Window will close \(window)")
+                let nsView = window.contentView
+                let subViews = nsView?.subviews
+                let superView = nsView?.superview
+                if nsView is NSHostingView<DashboardView> {
+                    print("view will close \(String(describing: nsView))")
+                }
+                if superView is NSHostingView<DashboardView> {
+                    print("superview will close \(String(describing: superView))")
+                }
+                for view in subViews! {
+                    if view is any NSViewRepresentable {
+                        print("subview will close \(String(describing: view))")
+                    }
+                }
             }
         }
     }

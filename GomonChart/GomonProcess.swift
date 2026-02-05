@@ -9,22 +9,12 @@ import Foundation
 import SwiftData
 import SwiftUI
 
-struct OpenWindow: NotificationCenter.AsyncMessage {
-    typealias Subject = GomonProcess
-    let id: UUID
-    let title: String
-    let window: NSWindow?
-}
-
-actor GomonProcess {
-    @Observable final class Coordinator {
+final class GomonProcess {
+    final class Coordinator {
         var gomonProcess: GomonProcess?
     }
-
-    @MainActor var appIsTerminating: Bool = false
-    @MainActor var insert: (@MainActor @Sendable (GomonEvents) -> Bool)? = nil // = { _ in true }
-    @MainActor static private let coordinator = Coordinator()
-    @MainActor static var shared: GomonProcess? {
+    static let coordinator = Coordinator()
+    static var shared: GomonProcess? {
         get {
             if coordinator.gomonProcess == nil {
                 coordinator.gomonProcess = GomonProcess()
@@ -35,6 +25,9 @@ actor GomonProcess {
             coordinator.gomonProcess = newValue
         }
     }
+
+    var appIsTerminating: Bool = false
+    var insert: (@MainActor @Sendable ([Event]) -> Bool)? = nil // = { _ in true }
 
     let command = Process()
     let stdout = Pipe()
@@ -53,7 +46,7 @@ actor GomonProcess {
         // Does setting PATH work to find executable with/without sandboxing?
         command.environment = ["GOMON_LOG_LEVEL": "debug", "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/keefe/go/bin"]
 
-        Task {
+        Task.detached { [self] in
             // create observers here in task, so that they are retained until task exits
             let stderrObserver = NotificationCenter.default.addObserver(
                 forName: FileHandle.readCompletionNotification,
@@ -75,12 +68,12 @@ actor GomonProcess {
                 let data = notification.userInfo?["NSFileHandleNotificationDataItem"] as! Data
                 stdout.fileHandleForReading.readInBackgroundAndNotify()
 
-                let events = GomonEvents(data: data)
-                if !events.events.isEmpty {
+                let events = GomonEvents.events(data: data)
+                if !events.isEmpty {
                     Task { @MainActor [self] in
-                        if let fn = insert,
-                           !fn(events) { // if insert fails ...
-                            insert = nil //   un-register event capture
+                        if insert != nil,
+                           !insert!(events) { // if insert fails ...
+                            insert = nil      //   un-register event capture
                             command.terminate()
                         }
                     }
@@ -119,7 +112,7 @@ actor GomonProcess {
         }
     }
 
-    @MainActor func register(_ insert: @escaping (@MainActor @Sendable (GomonEvents) -> Bool) ) {
+    func register(_ insert: @escaping (@MainActor @Sendable ([Event]) -> Bool) ) {
         self.insert = insert
     }
 }
