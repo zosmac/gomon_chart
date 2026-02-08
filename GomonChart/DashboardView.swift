@@ -9,67 +9,54 @@ import SwiftUI
 import SwiftData
 
 struct DashboardView: View {
-    @Environment(\.colorScheme) var colorScheme
-    @State private var predicate: Predicate<Event>?
+    @Query private var events: [Event]
     @State private var event: Event?
-    @State private var eventKind: GomonEvents.Kind = .allEvents
+    @State private var eventId: String = ""
 
     var body: some View {
         NavigationSplitView {
-            EventListView(predicate: predicate, event: $event)
-                .navigationSplitViewColumnWidth(ideal: 320.0)
-                .toolbar {
-                    ToolbarItem(id: "Event Type", placement: .primaryAction) {
-                        ControlGroup("Event Type") {
-                            Button("All", systemImage: "rectangle.3.group") {
-                                eventKind = .allEvents
-                                predicate = nil
-                            }
-                            .glassEffect(.regular.tint(tint(eventKind == .allEvents)))
-                            Button("Process", systemImage: "list.clipboard") {
-                                eventKind = .processMeasure
-                                predicate = #Predicate<Event> { $0 is MeasureProcess }
-                            }
-                            .glassEffect(.regular.tint(tint(eventKind == .processMeasure)))
-                            Button("Serve", systemImage: "server.rack") {
-                                eventKind = .serveMeasure
-                                predicate = #Predicate<Event> { $0 is MeasureServe }
-                            }
-                            .glassEffect(.regular.tint(tint(eventKind == .serveMeasure)))
-                        }
-                    }
-                }
+            let eventIds = Set(events.map { $0.eventId() }).sorted(by: <)
+            EventListView(eventIds: eventIds, eventId: $eventId)
+                .navigationSplitViewColumnWidth(ideal: 200.0)
+        } content: {
+            let events = events.filter{$0.eventId() == eventId}.sorted{$0._timestamp! > $1._timestamp!}
+            EventTimeView(events: events, event: $event)
+                .navigationSplitViewColumnWidth(ideal: 250.0)
         } detail: {
             EventView(event: event)
         }
     }
-
-    func tint(_ accent: Bool) -> Color {
-        accent ? Color.accentColor.opacity(0.3) : colorScheme == .light ? Color.white : Color.black
-    }
 }
 
 struct EventListView: View {
-    @Binding var event: Event?
-    @Query private var events: [Event]
-    @State private var eventID: PersistentIdentifier?
+    var eventIds: [String]
+    @Binding var eventId: String
 
-    init(predicate: Predicate<Event>? = nil, event: Binding<Event?>) {
-        _events = Query(
-            filter: predicate,
-            sort: [.init(\._timestamp, order: .reverse)],
-        )
-        _event = event
+    var body: some View {
+        ScrollViewReader { proxy in
+            List(selection: $eventId) {
+                ForEach(eventIds, id: \.self) { event in
+                    Text(event)
+                        .tag(event)
+                }
+            }
+            .onChange(of: eventId) {
+                print("eventId selected: \($0) -> \($1)")
+            }
+        }
     }
+}
+
+struct EventTimeView: View {
+    var events: [Event]
+    @Binding var event: Event?
+    @State private var eventID: PersistentIdentifier?
 
     var body: some View {
         ScrollViewReader { proxy in
             List(events, selection: $eventID) { event in
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(event.eventId())
-                    Text(event.timestamp)
-                }
-                .tag(event.id)
+                Text(event.timestamp)
+                    .tag(event.id)
             }
             .onChange(of: events, initial: true) {
                 if ($0.count == 0 || $0.count > 0 && eventID == $0[0].id) && $1.count > 0 {

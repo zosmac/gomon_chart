@@ -10,33 +10,37 @@ import SwiftData
 import SwiftUI
 
 final class GomonProcess {
-    final class Coordinator {
-        var gomonProcess: GomonProcess?
-    }
-    static let coordinator = Coordinator()
+    static private var _shared: GomonProcess?
     static var shared: GomonProcess? {
-        get {
-            if coordinator.gomonProcess == nil {
-                coordinator.gomonProcess = GomonProcess()
+        if _shared == nil {
+            if !appIsTerminating {
+                _shared = GomonProcess()
             }
-            return coordinator.gomonProcess
         }
-        set {
-            coordinator.gomonProcess = newValue
-        }
+        return _shared
     }
-
-    var appIsTerminating: Bool = false
-    var insert: (@MainActor @Sendable ([Event]) -> Bool)? = nil // = { _ in true }
+    static private var appIsTerminating: Bool = false
+    static func terminate(appIsTerminating: Bool) -> NSApplication.TerminateReply {
+        Self.appIsTerminating = appIsTerminating
+        if let _shared,
+           _shared.command.isRunning {
+            Self._shared = nil
+            print("process object is \(_shared)")
+            _shared.command.terminate()
+            return .terminateLater
+        }
+        return .terminateNow
+    }
 
     let command = Process()
     let stdout = Pipe()
     let stderr = Pipe()
+    var insert: (@MainActor @Sendable ([Event]) -> Bool)? = nil // = { _ in true }
 
     private init() {
         // the filepath used here depends on sandboxing. Without sandboxing, use absolute path. With sandboxing, a relative path looks in the product location.
-        //            process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        //            process.arguments = ["-c", "/Users/keefe/go/bin/gomon -measures process -events none -top 1"]
+        //            command.executableURL = URL(fileURLWithPath: "/bin/sh")
+        //            command.arguments = ["-c", "/Users/keefe/go/bin/gomon -measures process -events none -top 1"]
 
         command.executableURL = URL(filePath: "/Users/keefe/go/bin/gomon", directoryHint: .notDirectory, )
         command.arguments = ["-measurements", "process", "-observations", "none", "-top", "1"]
@@ -73,8 +77,7 @@ final class GomonProcess {
                     Task { @MainActor [self] in
                         if insert != nil,
                            !insert!(events) { // if insert fails ...
-                            insert = nil      //   un-register event capture
-                            command.terminate()
+                            _ = GomonProcess.terminate(appIsTerminating: false)
                         }
                     }
                 }
@@ -87,8 +90,8 @@ final class GomonProcess {
                 queue: .current
             ) { notification in
                 print("process terminated \(String(describing: notification.object))")
-                Task { @MainActor [self] in
-                    if appIsTerminating {
+                Task { @MainActor in
+                    if GomonProcess.appIsTerminating {
                         NSApp.reply(toApplicationShouldTerminate: true)
                     }
                 }
@@ -99,9 +102,6 @@ final class GomonProcess {
                 stderr.fileHandleForReading.readInBackgroundAndNotify()
                 stdout.fileHandleForReading.readInBackgroundAndNotify()
                 command.waitUntilExit()
-                Task { @MainActor in
-                    GomonProcess.shared = nil
-                }
             } catch {
                 print(error)
             }
