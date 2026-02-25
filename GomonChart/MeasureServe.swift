@@ -10,10 +10,6 @@ import SwiftData
 
 @available(macOS 26.0, *)
 @Model class MeasureServe: Event {
-    override func eventId() -> String {
-        "\(serveId?.name ?? "")"
-    }
-
     var serveId: ServeID?
     var address: String?     // http address of gomon's server
     var endpoints: [String]? // server endpoints
@@ -23,6 +19,7 @@ import SwiftData
     var lokiStreams: Int?      // loki
 
     enum CodingKeys: String, CodingKey, CaseIterable {
+        case eventId
         case serveId = "event_id"
         case address
         case endpoints
@@ -46,6 +43,7 @@ import SwiftData
         collectionTime = try container.decode(Int64.self, forKey: .collectionTime)
         lokiStreams = try container.decode(Int.self, forKey: .lokiStreams)
         try super.init(from: decoder)
+        eventId = serveId?.name ?? ""
     }
 
     override func encode(to encoder: any Encoder) throws {

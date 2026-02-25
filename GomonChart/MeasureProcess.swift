@@ -10,11 +10,6 @@ import SwiftData
 
 @available(macOS 26.0, *)
 @Model class MeasureProcess: Event {
-    override func eventId() -> String {
-        guard let processId else { return "" }
-        return "\(processId.name)[\(processId.pid)]"
-    }
-
     var processId: ProcessID?
     var ppid: Int?
     var pgid: Int?
@@ -46,6 +41,7 @@ import SwiftData
     var connections: [Connection]?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
+        case eventId
         case processId = "event_id"
         case ppid
         case pgid
@@ -109,6 +105,9 @@ import SwiftData
         writeRequested = try? container.decode(Int.self, forKey: .writeRequested)
         connections = try? container.decode([Connection].self, forKey: .connections)
         try super.init(from: decoder)
+        if processId != nil && !processId!.name.isEmpty {
+            eventId = "\(processId!.name.split(separator: ".").last!)[\(processId!.pid)]"
+        }
     }
 
     override func encode(to encoder: any Encoder) throws {

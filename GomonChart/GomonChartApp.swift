@@ -17,7 +17,7 @@ struct GomonChartApp: App {
             editing: .gomonEventsDocument,
             migrationPlan: GomonEventsMigrationPlan.self,
             editor: {
-                DashboardView()
+                GomonChartView()
             },
             prepareDocument: { modelContext in
                 // Each "new" document replaces the gomon process insert events closure.
@@ -41,6 +41,8 @@ struct GomonChartApp: App {
                 }
             }
         )
+        .defaultSize(width: 1100, height: 400)
+        .defaultPosition(UnitPoint(x: 0.5, y: 0.1))
 
 //        Window("Nodegraph", id: "Nodegraph") {
 //            NodegraphView()
@@ -65,10 +67,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let nsView = window.contentView
                 let subViews = nsView?.subviews
                 let superView = nsView?.superview
-                if nsView is NSHostingView<DashboardView> {
+                if nsView is NSHostingView<GomonChartView> {
                     print("view will close \(String(describing: nsView))")
                 }
-                if superView is NSHostingView<DashboardView> {
+                if superView is NSHostingView<GomonChartView> {
                     print("superview will close \(String(describing: superView))")
                 }
                 for view in subViews! {

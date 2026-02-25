@@ -20,8 +20,10 @@ final class GomonProcess {
         return _shared
     }
     static private var appIsTerminating: Bool = false
-    static func terminate(appIsTerminating: Bool) -> NSApplication.TerminateReply {
-        Self.appIsTerminating = appIsTerminating
+    static func terminate(appIsTerminating: Bool = false) -> NSApplication.TerminateReply {
+        if appIsTerminating {
+            Self.appIsTerminating = appIsTerminating
+        }
         if let _shared,
            _shared.command.isRunning {
             Self._shared = nil
@@ -43,7 +45,7 @@ final class GomonProcess {
         //            command.arguments = ["-c", "/Users/keefe/go/bin/gomon -measures process -events none -top 1"]
 
         command.executableURL = URL(filePath: "/Users/keefe/go/bin/gomon", directoryHint: .notDirectory, )
-        command.arguments = ["-measurements", "process", "-observations", "none", "-top", "1"]
+        command.arguments = ["-measurements", "process", "-observations", "none", "-sample", "10s", "-top", "1"]
         command.standardInput = FileHandle.nullDevice
         command.standardOutput = stdout.fileHandleForWriting
         command.standardError = stderr.fileHandleForWriting
@@ -77,7 +79,7 @@ final class GomonProcess {
                     Task { @MainActor [self] in
                         if insert != nil,
                            !insert!(events) { // if insert fails ...
-                            _ = GomonProcess.terminate(appIsTerminating: false)
+                            _ = GomonProcess.terminate()
                         }
                     }
                 }
@@ -91,9 +93,9 @@ final class GomonProcess {
             ) { notification in
                 print("process terminated \(String(describing: notification.object))")
                 Task { @MainActor in
-                    if GomonProcess.appIsTerminating {
+//                    if GomonProcess.appIsTerminating {
                         NSApp.reply(toApplicationShouldTerminate: true)
-                    }
+//                    }
                 }
             }
 

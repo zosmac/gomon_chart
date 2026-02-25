@@ -9,10 +9,10 @@ import Foundation
 import SwiftUI
 
 struct ContentView: NSViewRepresentable {
-    typealias NSViewType = NSHostingView<DashboardView>
+    typealias NSViewType = NSHostingView<GomonChartView>
 
     func makeNSView(context: Context) -> NSViewType {
-        NSHostingView(rootView: DashboardView())
+        NSHostingView(rootView: GomonChartView())
     }
 
     func updateNSView(_ nsView: NSViewType, context: Context) { }

@@ -17,9 +17,12 @@ extension UTType {
 
 /// GomonEvents encodes and decodes JSON Gomon events, nonisolated so that it can be called from GomonProcess detached Task.
 nonisolated final class GomonEvents {
-//    enum Kind: Int {
-//        case eventAny = 0, measureProcess, measureServe
-//    }
+    enum Kind: String, CaseIterable {
+        static let allCases: [Kind] = [processCPUTime, collectionTime, event]
+        case processCPUTime = "Process CPU Time"
+        case collectionTime = "Collection Time"
+        case event = "Event"
+    }
 
     /// jsonDateStyle defines style to format dates consistent with the JSON encoder's date format.
     static let jsonDateStyle = Date.ISO8601FormatStyle(
@@ -84,7 +87,7 @@ nonisolated final class GomonEvents {
     var platform: String?
     var source: String?
     var event: String?
-    func eventId() -> String { "" } // override in model subclasses
+    var eventId: String = ""
 
     var timestamp: String {
         get {
