@@ -18,6 +18,7 @@ struct GomonChartApp: App {
             migrationPlan: GomonEventsMigrationPlan.self,
             editor: {
                 GomonChartView()
+//                GomonEventView()
             },
             prepareDocument: { modelContext in
                 // Each "new" document replaces the gomon process insert events closure.

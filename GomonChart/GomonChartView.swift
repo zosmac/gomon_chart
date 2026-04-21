@@ -14,6 +14,9 @@ struct GomonChartView: View {
     @Query(sort: [.init(\Event.eventId), .init(\Event._timestamp)]) private var events: [Event]
     @State private var eventKind: GomonEvents.Kind = .processCPUTime
     @State private var measureId: Measure.ID?
+    @State private var measure: Measure?
+    @State private var scrollPosition = Date.distantFuture
+    @State private var chartXVisibleDomain = 4*3600 // x axis length four hours
 
     var body: some View {
         let measures = events
@@ -39,24 +42,31 @@ struct GomonChartView: View {
             .navigationSplitViewColumnWidth(ideal: 150.0)
             .onChange(of: eventKind) {
                 print("eventKind selected: \($0) -> \($1)")
-//                Measure.domain = [Double.zero, Double.zero]
             }
         } content: {
-            MeasuresChart(measures: measures, eventKind: eventKind)
-            .navigationSplitViewColumnWidth(ideal: 400.0)
+            MeasuresChart(measures: measures, eventKind: eventKind, measure: $measure, xAxisLength: $chartXVisibleDomain, scrollPosition: $scrollPosition)
+                .navigationSplitViewColumnWidth(ideal: 400.0)
+                .onChange(of: scrollPosition) {
+                    print("\(scrollPosition)")
+                }
         } detail: {
             MeasuresTable(measures: measures, eventKind: eventKind, measureId: $measureId)
                 .onChange(of: measureId) {
                     if let index = events.firstIndex(where: { $0.id == measureId }) {
                         print(String(data: try! events[index].encode(), encoding: .utf8)!)
                     }
+                    if let index = measures.firstIndex(where: { $0.id == measureId }) {
+                        measure = measures[index]
+                        scrollPosition = measure!.timestamp.addingTimeInterval(TimeInterval(-chartXVisibleDomain/2))
+                        print("\(measure!.eventId) \(measure!.timestamp) \(measure!.value) ")
+                    }
                 }
+                .ignoresSafeArea()
         }
     }
 }
 
 struct Measure: Identifiable {
-//    static var domain = [Double.zero, Double.zero]
     var id: PersistentIdentifier
     let eventId: String
     let timestamp: Date
@@ -80,55 +90,72 @@ struct Measure: Identifiable {
         self.id = current.persistentModelID
         self.eventId = current.eventId
         self.timestamp = current._timestamp!
-//        Self.domain[0] = min(Self.domain[0], self.value.rounded(.down))
-//        Self.domain[1] = max(Self.domain[1], self.value.rounded(.up))
     }
 }
 
 struct MeasuresChart: View {
     var measures: [Measure]
     var eventKind: GomonEvents.Kind
-    static private let dateFormatter = {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM"
-        return dateFormatter
-    }()
-    static private let hourFormatter = {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "HH"
-        return dateFormatter
-    }()
+    @Binding var measure: Measure?
+    @Binding var xAxisLength: Int
+    @Binding var scrollPosition: Date
+
+    //    static private let dateFormatter = {
+    //        let dateFormatter = DateFormatter()
+    //        dateFormatter.dateFormat = "dd/MM"
+    //        return dateFormatter
+    //    }()
+    //    static private let hhmmFormatter = {
+    //        let dateFormatter = DateFormatter()
+    //        dateFormatter.dateFormat = "HH:mm"
+    //        return dateFormatter
+    //    }()
 
     var body: some View {
         Chart(measures, id: \.timestamp) {
-            LineMark(x: .value("Timestamp", $0.timestamp), y: .value("CPU", $0.value))
+            LineMark(x: .value("Timestamp", $0.timestamp), y: .value("Measure", $0.value))
                 .foregroundStyle(by: .value("Event ID", $0.eventId))
                 .symbol(by: .value("Event ID", $0.eventId))
+//                .interpolationMethod(.catmullRom(alpha: 0.5))
+                .interpolationMethod(.cardinal(tension: 0.8)) // Smooth the line using cardinal interpolation
+            if let measure {
+                PointMark(x: .value("Timestamp", measure.timestamp), y: .value("Measure", measure.value))
+                    .symbolSize(by: .value("Measure", measure.value))
+                    .annotation {
+                        Text("\(measure.timestamp.formatted(date: .numeric, time: .standard))\n\(measure.eventId)\n\(measure.value)")
+                    }
+            }
         }
-//        .chartYScale(domain: .automatic(includesZero: true, reversed: false, dataType: Double.self) { $0.append(Measure.domain[1]) }) // Measure.domain)
         .chartXAxis {
-            AxisMarks(values: .stride(by: .hour, count: 3)) { value in
-                if let date = value.as(Date.self) {
-                    let hour = Calendar.current.component(.hour, from: date)
-                    AxisValueLabel {
-                        VStack(alignment: .leading) {
-                            Text(date, formatter: Self.hourFormatter)
-                            if value.index == 0 || hour == 0 {
-                                Text(date, formatter: Self.dateFormatter)
-                            }
-                        }
+            AxisMarks(values: .stride(by: .hour, roundLowerBound: true, roundUpperBound: true)) { value in
+                let date = value.as(Date.self)!
+                AxisValueLabel(anchor: .top) {
+                    VStack {
+                        Text(date, format: .dateTime.hour())
+                        Text(date, format: .dateTime.month().day())
                     }
-
-                    if hour == 0 {
-                        AxisGridLine(stroke: StrokeStyle(lineWidth: 1.0))
-                        AxisTick(stroke: StrokeStyle(lineWidth: 1.0))
-                    } else {
-                        AxisGridLine()
-                        AxisTick()
+                }
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 1, dash: [5]))
+            }
+            AxisMarks(values: .stride(by: .minute, count: 10, roundLowerBound: true, roundUpperBound: true)) { value in
+                let date = value.as(Date.self)!
+                let minute = Calendar.current.component(.minute, from: date)
+                if minute == 30 {
+                    AxisValueLabel(anchor: .top) {
+                        Text(date, format: .dateTime.hour(.defaultDigits(amPM: .omitted)).minute())
                     }
+                    AxisGridLine()
                 }
             }
         }
+        .chartXScale(domain: .automatic)
+        .chartScrollableAxes(.horizontal) // Enable horizontal scrolling
+        .chartXVisibleDomain(length: xAxisLength) // Show 4 hours at a time on the X-axis
+        .chartYAxis {
+            AxisMarks(position: .leading)
+        }
+        .chartScrollPosition(x: $scrollPosition)
+        .onAppear()
     }
 }
 
@@ -136,6 +163,7 @@ struct MeasuresTable: View {
     var measures: [Measure]
     var eventKind: GomonEvents.Kind
     @Binding var measureId: Measure.ID?
+
     var body: some View {
         Table(measures, selection: $measureId) {
             TableColumn("Event ID", value: \.eventId)
@@ -152,91 +180,5 @@ struct MeasuresTable: View {
             .alignment(.trailing)
         }
         .toolbarBackgroundVisibility(.hidden, for: .automatic)
-        .ignoresSafeArea()
     }
 }
-
-//    @State private var event: Event?
-//    @State private var eventId: String = ""
-//
-//        NavigationSplitView {
-//            let eventIds = Set(events.map{$0.eventId}).sorted(by: <)
-//            EventListView(eventIds: eventIds, eventId: $eventId)
-//                .navigationSplitViewColumnWidth(ideal: 200.0)
-//        } content: {
-//            let events = events.filter{$0.eventId == eventId}.sorted{$0._timestamp! > $1._timestamp!}
-//            EventTimeView(events: events, event: $event)
-//                .navigationSplitViewColumnWidth(ideal: 250.0)
-//        } detail: {
-//            EventView(event: event)
-//        }
-
-//struct EventListView: View {
-//    var eventIds: [String]
-//    @Binding var eventId: String
-//
-//    var body: some View {
-//        ScrollViewReader { proxy in
-//            List(selection: $eventId) {
-//                ForEach(eventIds, id: \.self) { event in
-//                    Text(event)
-//                        .tag(event)
-//                }
-//            }
-//            .onChange(of: eventId) {
-//                print("eventId selected: \($0) -> \($1)")
-//            }
-//        }
-//    }
-//}
-//
-//struct EventTimeView: View {
-//    var events: [Event]
-//    @Binding var event: Event?
-//    @State private var eventID: PersistentIdentifier?
-//
-//    var body: some View {
-//        ScrollViewReader { proxy in
-//            List(events, selection: $eventID) { event in
-//                Text(event.timestamp)
-//                    .tag(event.id)
-//            }
-//            .onChange(of: events, initial: true) {
-//                if ($0.count == 0 || $0.count > 0 && eventID == $0[0].id) && $1.count > 0 {
-//                    eventID = $1[0].id
-//                    proxy.scrollTo(eventID, anchor: .top)
-//                } else if $0.count > 0 && eventID == nil {
-//                    eventID = $0[0].id
-//                    proxy.scrollTo(eventID, anchor: .top)
-//                } else {
-//                    proxy.scrollTo(eventID, anchor: .center)
-//                }
-//            }
-//            .onChange(of: eventID) {
-//                if let index = events.firstIndex(where: { $0.id == eventID }) {
-//                    event = events[index]
-//                } else if events.count > 0 {
-//                    event = events[0]
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//struct EventView: View {
-//    var event: Event?
-//    var body: some View {
-//        if let event {
-//            ScrollView {
-//                Text(String(data: (try? event.encode()) ?? Data(), encoding: .utf8) ?? "no data")
-//                    .multilineTextAlignment(.leading)
-//                    .font(.system(size: 12.0))
-//                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-//                    .padding(10)
-//            }
-//            .navigationSubtitle("\(event.eventId)\n\(event.timestamp)")
-//        } else {
-//            Text("Awaiting first events from Gomon...")
-//        }
-//    }
-//}
